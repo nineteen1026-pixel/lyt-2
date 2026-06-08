@@ -6,6 +6,7 @@ import Medication from "@/pages/Medication";
 import Alerts from "@/pages/Alerts";
 import Contacts from "@/pages/Contacts";
 import CommunityService from "@/pages/CommunityService";
+import MonthlyReport from "@/pages/MonthlyReport";
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/contacts" element={<Contacts />} />
           <Route path="/community-service" element={<CommunityService />} />
+          <Route path="/monthly-report" element={<MonthlyReport />} />
         </Route>
       </Routes>
     </Router>

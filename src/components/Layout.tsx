@@ -7,6 +7,7 @@ import {
   Users,
   ShieldCheck,
   CalendarCheck,
+  FileText,
 } from 'lucide-react'
 import { useCareStore } from '@/store/useCareStore'
 
@@ -16,6 +17,7 @@ const navItems = [
   { to: '/medication', icon: Pill, label: '用药提醒' },
   { to: '/alerts', icon: AlertTriangle, label: '异常告警' },
   { to: '/community-service', icon: CalendarCheck, label: '社区服务' },
+  { to: '/monthly-report', icon: FileText, label: '月度报告' },
   { to: '/contacts', icon: Users, label: '家属联系人' },
 ]
 

@@ -9,6 +9,7 @@ import {
   CalendarCheck,
   FileText,
   ShieldAlert,
+  CalendarDays,
 } from 'lucide-react'
 import { useCareStore } from '@/store/useCareStore'
 import { healthRecords } from '@/data/mockData'
@@ -20,6 +21,7 @@ const navItems = [
   { to: '/health', icon: HeartPulse, label: '健康记录' },
   { to: '/medication', icon: Pill, label: '用药提醒' },
   { to: '/alerts', icon: AlertTriangle, label: '异常告警' },
+  { to: '/schedule', icon: CalendarDays, label: '照护排班' },
   { to: '/community-service', icon: CalendarCheck, label: '社区服务' },
   { to: '/monthly-report', icon: FileText, label: '月度报告' },
   { to: '/contacts', icon: Users, label: '家属联系人' },
@@ -31,6 +33,9 @@ export default function Layout() {
   )
   const pendingFamilyConfirm = useCareStore(
     (s) => s.appointments.filter((a) => a.status === 'family_pending').length
+  )
+  const overdueTasks = useCareStore(
+    (s) => s.careTasks.filter((t) => t.status === 'overdue').length
   )
   const riskState = useCareStore((s) => {
     const assessment = assessRisk('1', healthRecords, s.alerts, s.medications)
@@ -75,6 +80,11 @@ export default function Layout() {
               {item.to === '/community-service' && pendingFamilyConfirm > 0 && (
                 <span className="ml-auto bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
                   {pendingFamilyConfirm}
+                </span>
+              )}
+              {item.to === '/schedule' && overdueTasks > 0 && (
+                <span className="ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+                  {overdueTasks}
                 </span>
               )}
             </NavLink>

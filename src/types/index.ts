@@ -127,3 +127,57 @@ export interface Appointment {
   createdAt: string
   notes: string
 }
+
+export type CareTaskCategory =
+  | 'daily_care'
+  | 'medical'
+  | 'housework'
+  | 'accompany'
+  | 'emotional'
+  | 'finance'
+
+export type CareTaskPriority = 'high' | 'medium' | 'low'
+
+export type CareTaskStatus = 'pending' | 'in_progress' | 'completed' | 'overdue'
+
+export type TodoSyncSource = 'medication' | 'appointment' | 'alert' | 'manual'
+
+export type TodoSyncStatus = 'pending' | 'done' | 'synced'
+
+export interface CareTask {
+  id: string
+  elderlyId: string
+  title: string
+  description: string
+  category: CareTaskCategory
+  priority: CareTaskPriority
+  status: CareTaskStatus
+  assignedContactId: string
+  scheduledDate: string
+  scheduledTime: string
+  durationMinutes: number
+  recurringRule?: string
+  completedAt?: string
+  createdAt: string
+}
+
+export interface CareSchedule {
+  id: string
+  elderlyId: string
+  weekStart: string
+  tasks: CareTask[]
+}
+
+export interface TodoItem {
+  id: string
+  elderlyId: string
+  title: string
+  source: TodoSyncSource
+  sourceId?: string
+  scheduledDate: string
+  scheduledTime: string
+  status: TodoSyncStatus
+  assignedContactId?: string
+  syncedAt?: string
+  createdAt: string
+}

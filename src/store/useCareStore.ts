@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import type { Alert, Medication, Appointment, AppointmentStatus } from '@/types'
-import { alerts as mockAlerts, medications as mockMedications, appointments as mockAppointments } from '@/data/mockData'
+import type { Alert, Medication, Appointment, AppointmentStatus, CareTask, CareTaskStatus, TodoItem, TodoSyncStatus } from '@/types'
+import { alerts as mockAlerts, medications as mockMedications, appointments as mockAppointments, careTasks as mockCareTasks, todoItems as mockTodoItems } from '@/data/mockData'
 
 const VALID_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
   pending: ['family_pending', 'rejected'],
@@ -20,6 +20,8 @@ interface CareStore {
   alerts: Alert[]
   medications: Medication[]
   appointments: Appointment[]
+  careTasks: CareTask[]
+  todoItems: TodoItem[]
   resolveAlert: (id: string) => void
   toggleMedication: (id: string) => void
   approveAppointment: (id: string) => void
@@ -29,12 +31,23 @@ interface CareStore {
   completeAppointment: (id: string) => void
   cancelAppointment: (id: string) => void
   addAppointment: (appointment: Appointment) => void
+  addCareTask: (task: CareTask) => void
+  updateCareTask: (id: string, updates: Partial<CareTask>) => void
+  deleteCareTask: (id: string) => void
+  completeCareTask: (id: string) => void
+  reassignCareTask: (id: string, contactId: string) => void
+  addTodoItem: (item: TodoItem) => void
+  updateTodoStatus: (id: string, status: TodoSyncStatus) => void
+  syncTodoItem: (id: string) => void
+  assignTodoItem: (id: string, contactId: string) => void
 }
 
 export const useCareStore = create<CareStore>((set) => ({
   alerts: mockAlerts,
   medications: mockMedications,
   appointments: mockAppointments,
+  careTasks: mockCareTasks,
+  todoItems: mockTodoItems,
   resolveAlert: (id: string) =>
     set((state) => ({
       alerts: state.alerts.map((a) =>
@@ -116,5 +129,77 @@ export const useCareStore = create<CareStore>((set) => ({
   addAppointment: (appointment: Appointment) =>
     set((state) => ({
       appointments: [appointment, ...state.appointments],
+    })),
+  addCareTask: (task: CareTask) =>
+    set((state) => ({
+      careTasks: [task, ...state.careTasks],
+    })),
+  updateCareTask: (id: string, updates: Partial<CareTask>) =>
+    set((state) => ({
+      careTasks: state.careTasks.map((t) =>
+        t.id === id ? { ...t, ...updates } : t
+      ),
+    })),
+  deleteCareTask: (id: string) =>
+    set((state) => ({
+      careTasks: state.careTasks.filter((t) => t.id !== id),
+    })),
+  completeCareTask: (id: string) =>
+    set((state) => ({
+      careTasks: state.careTasks.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              status: 'completed' as CareTaskStatus,
+              completedAt: new Date().toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+              }).replace(/\//g, '-'),
+            }
+          : t
+      ),
+    })),
+  reassignCareTask: (id: string, contactId: string) =>
+    set((state) => ({
+      careTasks: state.careTasks.map((t) =>
+        t.id === id ? { ...t, assignedContactId: contactId } : t
+      ),
+    })),
+  addTodoItem: (item: TodoItem) =>
+    set((state) => ({
+      todoItems: [item, ...state.todoItems],
+    })),
+  updateTodoStatus: (id: string, status: TodoSyncStatus) =>
+    set((state) => ({
+      todoItems: state.todoItems.map((t) =>
+        t.id === id ? { ...t, status } : t
+      ),
+    })),
+  syncTodoItem: (id: string) =>
+    set((state) => ({
+      todoItems: state.todoItems.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              status: 'synced' as TodoSyncStatus,
+              syncedAt: new Date().toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+              }).replace(/\//g, '-'),
+            }
+          : t
+      ),
+    })),
+  assignTodoItem: (id: string, contactId: string) =>
+    set((state) => ({
+      todoItems: state.todoItems.map((t) =>
+        t.id === id ? { ...t, assignedContactId: contactId } : t
+      ),
     })),
 }))

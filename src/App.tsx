@@ -8,6 +8,7 @@ import Contacts from "@/pages/Contacts";
 import CommunityService from "@/pages/CommunityService";
 import MonthlyReport from "@/pages/MonthlyReport";
 import RiskStratification from "@/pages/RiskStratification";
+import Schedule from "@/pages/Schedule";
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="/community-service" element={<CommunityService />} />
           <Route path="/monthly-report" element={<MonthlyReport />} />
           <Route path="/risk-stratification" element={<RiskStratification />} />
+          <Route path="/schedule" element={<Schedule />} />
         </Route>
       </Routes>
     </Router>

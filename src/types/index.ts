@@ -181,3 +181,27 @@ export interface TodoItem {
   syncedAt?: string
   createdAt: string
 }
+
+export interface CheckInRecord {
+  id: string
+  taskId: string
+  elderlyId: string
+  contactId: string
+  contactName: string
+  note: string
+  checkInAt: string
+}
+
+export type ReminderStatus = 'active' | 'dismissed' | 'escalated'
+
+export interface TaskReminder {
+  id: string
+  taskId: string
+  elderlyId: string
+  contactId: string
+  contactName: string
+  message: string
+  status: ReminderStatus
+  createdAt: string
+  dismissedAt?: string
+}

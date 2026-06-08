@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import type { Alert, Medication, Appointment, AppointmentStatus, CareTask, CareTaskStatus, TodoItem, TodoSyncStatus } from '@/types'
-import { alerts as mockAlerts, medications as mockMedications, appointments as mockAppointments, careTasks as mockCareTasks, todoItems as mockTodoItems } from '@/data/mockData'
+import type { Alert, Medication, Appointment, AppointmentStatus, CareTask, CareTaskStatus, TodoItem, TodoSyncStatus, CheckInRecord, TaskReminder, ReminderStatus } from '@/types'
+import { alerts as mockAlerts, medications as mockMedications, appointments as mockAppointments, careTasks as mockCareTasks, todoItems as mockTodoItems, checkInRecords as mockCheckInRecords, taskReminders as mockTaskReminders } from '@/data/mockData'
 
 const VALID_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
   pending: ['family_pending', 'rejected'],
@@ -22,6 +22,8 @@ interface CareStore {
   appointments: Appointment[]
   careTasks: CareTask[]
   todoItems: TodoItem[]
+  checkInRecords: CheckInRecord[]
+  taskReminders: TaskReminder[]
   resolveAlert: (id: string) => void
   toggleMedication: (id: string) => void
   approveAppointment: (id: string) => void
@@ -40,6 +42,10 @@ interface CareStore {
   updateTodoStatus: (id: string, status: TodoSyncStatus) => void
   syncTodoItem: (id: string) => void
   assignTodoItem: (id: string, contactId: string) => void
+  checkInTask: (taskId: string, contactId: string, contactName: string, note: string) => void
+  dismissReminder: (id: string) => void
+  escalateReminder: (id: string) => void
+  addReminder: (reminder: TaskReminder) => void
 }
 
 export const useCareStore = create<CareStore>((set) => ({
@@ -48,6 +54,8 @@ export const useCareStore = create<CareStore>((set) => ({
   appointments: mockAppointments,
   careTasks: mockCareTasks,
   todoItems: mockTodoItems,
+  checkInRecords: mockCheckInRecords,
+  taskReminders: mockTaskReminders,
   resolveAlert: (id: string) =>
     set((state) => ({
       alerts: state.alerts.map((a) =>
@@ -201,5 +209,64 @@ export const useCareStore = create<CareStore>((set) => ({
       todoItems: state.todoItems.map((t) =>
         t.id === id ? { ...t, assignedContactId: contactId } : t
       ),
+    })),
+  checkInTask: (taskId: string, contactId: string, contactName: string, note: string) =>
+    set((state) => {
+      const now = new Date().toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).replace(/\//g, '-')
+      const record: CheckInRecord = {
+        id: `ci${Date.now()}`,
+        taskId,
+        elderlyId: '1',
+        contactId,
+        contactName,
+        note,
+        checkInAt: now,
+      }
+      return {
+        checkInRecords: [record, ...state.checkInRecords],
+        careTasks: state.careTasks.map((t) =>
+          t.id === taskId
+            ? {
+                ...t,
+                status: 'completed' as CareTaskStatus,
+                completedAt: now,
+              }
+            : t
+        ),
+      }
+    }),
+  dismissReminder: (id: string) =>
+    set((state) => ({
+      taskReminders: state.taskReminders.map((r) =>
+        r.id === id
+          ? {
+              ...r,
+              status: 'dismissed' as ReminderStatus,
+              dismissedAt: new Date().toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+              }).replace(/\//g, '-'),
+            }
+          : r
+      ),
+    })),
+  escalateReminder: (id: string) =>
+    set((state) => ({
+      taskReminders: state.taskReminders.map((r) =>
+        r.id === id ? { ...r, status: 'escalated' as ReminderStatus } : r
+      ),
+    })),
+  addReminder: (reminder: TaskReminder) =>
+    set((state) => ({
+      taskReminders: [reminder, ...state.taskReminders],
     })),
 }))

@@ -1,4 +1,4 @@
-import type { Elderly, HealthRecord, Medication, Alert, Contact, Appointment, CareTask, TodoItem } from '@/types'
+import type { Elderly, HealthRecord, Medication, Alert, Contact, Appointment, CareTask, TodoItem, CheckInRecord, TaskReminder } from '@/types'
 
 export const elderly: Elderly = {
   id: '1',
@@ -660,5 +660,116 @@ export const todoItems: TodoItem[] = [
     status: 'pending',
     assignedContactId: 'c1',
     createdAt: '2026-06-01 09:00',
+  },
+]
+
+export const checkInRecords: CheckInRecord[] = [
+  {
+    id: 'ci1',
+    taskId: 'ct2',
+    elderlyId: '1',
+    contactId: 'c4',
+    contactName: '王芳',
+    note: '已为老人准备午餐，低盐低糖，老人食欲良好',
+    checkInAt: '2026-06-08 11:50',
+  },
+  {
+    id: 'ci2',
+    taskId: 'ct7',
+    elderlyId: '1',
+    contactId: 'c3',
+    contactName: '李明',
+    note: '水电燃气费已通过手机银行代缴完成',
+    checkInAt: '2026-06-05 10:20',
+  },
+  {
+    id: 'ci3',
+    taskId: 'ct1',
+    elderlyId: '1',
+    contactId: 'c1',
+    contactName: '张建国',
+    note: '协助老人完成晨间洗漱，精神状态良好',
+    checkInAt: '2026-06-07 07:15',
+  },
+  {
+    id: 'ci4',
+    taskId: 'ct5',
+    elderlyId: '1',
+    contactId: 'c5',
+    contactName: '张小明',
+    note: '天气晴好，陪同老人在公园散步30分钟',
+    checkInAt: '2026-06-07 16:30',
+  },
+  {
+    id: 'ci5',
+    taskId: 'ct6',
+    elderlyId: '1',
+    contactId: 'c2',
+    contactName: '张美华',
+    note: '与老人聊天，老人情绪稳定，提到想见老朋友',
+    checkInAt: '2026-06-07 19:25',
+  },
+]
+
+export const taskReminders: TaskReminder[] = [
+  {
+    id: 'r1',
+    taskId: 'ct10',
+    elderlyId: '1',
+    contactId: 'c5',
+    contactName: '张小明',
+    message: '「采购生活用品」任务已于2026-06-07 09:00到期，至今未完成，请尽快处理。',
+    status: 'active',
+    createdAt: '2026-06-07 09:30',
+  },
+  {
+    id: 'r2',
+    taskId: 'ct1',
+    elderlyId: '1',
+    contactId: 'c1',
+    contactName: '张建国',
+    message: '「协助洗漱更衣」任务将于今日07:00执行，请提前准备。',
+    status: 'active',
+    createdAt: '2026-06-08 06:30',
+  },
+  {
+    id: 'r3',
+    taskId: 'ct8',
+    elderlyId: '1',
+    contactId: 'c1',
+    contactName: '张建国',
+    message: '「晚间用药监督」任务将于今晚21:00执行，请确保按时提醒老人服药。',
+    status: 'active',
+    createdAt: '2026-06-08 20:00',
+  },
+  {
+    id: 'r4',
+    taskId: 'ct3',
+    elderlyId: '1',
+    contactId: 'c2',
+    contactName: '张美华',
+    message: '「陪护就医复查」任务将于2026-06-12 08:30执行，请提前确认出行安排。',
+    status: 'active',
+    createdAt: '2026-06-08 08:00',
+  },
+  {
+    id: 'r5',
+    taskId: 'ct9',
+    elderlyId: '1',
+    contactId: 'c4',
+    contactName: '王芳',
+    message: '「协助沐浴」任务将于今晚20:00执行，注意防滑安全措施。',
+    status: 'active',
+    createdAt: '2026-06-08 19:00',
+  },
+  {
+    id: 'r6',
+    taskId: 'ct10',
+    elderlyId: '1',
+    contactId: 'c5',
+    contactName: '张小明',
+    message: '「采购生活用品」逾期已超过24小时，已升级提醒至紧急联系人。',
+    status: 'escalated',
+    createdAt: '2026-06-08 09:30',
   },
 ]

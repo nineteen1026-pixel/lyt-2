@@ -10,6 +10,7 @@ import {
   FileText,
   ShieldAlert,
   CalendarDays,
+  Handshake,
 } from 'lucide-react'
 import { useCareStore } from '@/store/useCareStore'
 import { healthRecords } from '@/data/mockData'
@@ -22,6 +23,7 @@ const navItems = [
   { to: '/medication', icon: Pill, label: '用药提醒' },
   { to: '/alerts', icon: AlertTriangle, label: '异常告警' },
   { to: '/schedule', icon: CalendarDays, label: '照护排班' },
+  { to: '/family-care-task', icon: Handshake, label: '家庭协同' },
   { to: '/community-service', icon: CalendarCheck, label: '社区服务' },
   { to: '/monthly-report', icon: FileText, label: '月度报告' },
   { to: '/contacts', icon: Users, label: '家属联系人' },
@@ -36,6 +38,9 @@ export default function Layout() {
   )
   const overdueTasks = useCareStore(
     (s) => s.careTasks.filter((t) => t.status === 'overdue').length
+  )
+  const activeReminders = useCareStore(
+    (s) => s.taskReminders.filter((r) => r.status === 'active').length
   )
   const riskState = useCareStore((s) => {
     const assessment = assessRisk('1', healthRecords, s.alerts, s.medications)
@@ -85,6 +90,11 @@ export default function Layout() {
               {item.to === '/schedule' && overdueTasks > 0 && (
                 <span className="ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
                   {overdueTasks}
+                </span>
+              )}
+              {item.to === '/family-care-task' && activeReminders > 0 && (
+                <span className="ml-auto bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+                  {activeReminders}
                 </span>
               )}
             </NavLink>

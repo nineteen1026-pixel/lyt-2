@@ -13,7 +13,7 @@ function generateHealthRecords(): HealthRecord[] {
   const records: HealthRecord[] = []
   const now = new Date()
 
-  for (let i = 29; i >= 0; i--) {
+  for (let i = 59; i >= 0; i--) {
     const date = new Date(now)
     date.setDate(date.getDate() - i)
     const dateStr = date.toISOString().split('T')[0]
@@ -66,68 +66,57 @@ function generateHealthRecords(): HealthRecord[] {
 
 export const healthRecords: HealthRecord[] = generateHealthRecords()
 
-export const medications: Medication[] = [
-  {
-    id: 'm1',
-    elderlyId: '1',
-    name: '硝苯地平缓释片',
-    dosage: '30mg',
-    frequency: '每日1次',
-    scheduledTime: '08:00',
-    status: 'taken',
-    notes: '饭后服用',
-  },
-  {
-    id: 'm2',
-    elderlyId: '1',
-    name: '二甲双胍',
-    dosage: '500mg',
-    frequency: '每日2次',
-    scheduledTime: '08:00',
-    status: 'taken',
-    notes: '随餐服用',
-  },
-  {
-    id: 'm3',
-    elderlyId: '1',
-    name: '阿司匹林肠溶片',
-    dosage: '100mg',
-    frequency: '每日1次',
-    scheduledTime: '12:00',
-    status: 'pending',
-    notes: '午饭后服用',
-  },
-  {
-    id: 'm4',
-    elderlyId: '1',
-    name: '二甲双胍',
-    dosage: '500mg',
-    frequency: '每日2次',
-    scheduledTime: '18:00',
-    status: 'pending',
-    notes: '随餐服用',
-  },
-  {
-    id: 'm5',
-    elderlyId: '1',
-    name: '辛伐他汀',
-    dosage: '20mg',
-    frequency: '每日1次',
-    scheduledTime: '21:00',
-    status: 'pending',
-    notes: '睡前服用',
-  },
-  {
-    id: 'm6',
-    elderlyId: '1',
-    name: '钙尔奇D',
-    dosage: '600mg',
-    frequency: '每日1次',
-    scheduledTime: '21:00',
-    status: 'pending',
-    notes: '睡前与辛伐他汀间隔30分钟',
-  },
-]
+function generateMedications(): Medication[] {
+  const records: Medication[] = []
+  const now = new Date()
+  const todayStr = now.toISOString().split('T')[0]
+
+  const prescriptions = [
+    { name: '硝苯地平缓释片', dosage: '30mg', frequency: '每日1次', time: '08:00', notes: '饭后服用' },
+    { name: '二甲双胍', dosage: '500mg', frequency: '每日2次', time: '08:00', notes: '随餐服用' },
+    { name: '阿司匹林肠溶片', dosage: '100mg', frequency: '每日1次', time: '12:00', notes: '午饭后服用' },
+    { name: '二甲双胍', dosage: '500mg', frequency: '每日2次', time: '18:00', notes: '随餐服用' },
+    { name: '辛伐他汀', dosage: '20mg', frequency: '每日1次', time: '21:00', notes: '睡前服用' },
+    { name: '钙尔奇D', dosage: '600mg', frequency: '每日1次', time: '21:00', notes: '睡前与辛伐他汀间隔30分钟' },
+  ]
+
+  let idCounter = 0
+
+  for (let i = 59; i >= 0; i--) {
+    const date = new Date(now)
+    date.setDate(date.getDate() - i)
+    const dateStr = date.toISOString().split('T')[0]
+
+    for (const rx of prescriptions) {
+      let status: Medication['status']
+      if (dateStr < todayStr) {
+        const rand = Math.random()
+        if (rand < 0.82) status = 'taken'
+        else if (rand < 0.92) status = 'missed'
+        else status = 'taken'
+      } else {
+        if (rx.time < '12:00' && Math.random() < 0.7) status = 'taken'
+        else status = 'pending'
+      }
+
+      records.push({
+        id: `med-${idCounter++}`,
+        elderlyId: '1',
+        name: rx.name,
+        dosage: rx.dosage,
+        frequency: rx.frequency,
+        scheduledTime: rx.time,
+        status,
+        date: dateStr,
+        notes: rx.notes,
+      })
+    }
+  }
+
+  return records
+}
+
+export const medications: Medication[] = generateMedications()
 
 export const alerts: Alert[] = [
   {

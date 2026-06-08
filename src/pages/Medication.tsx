@@ -30,11 +30,14 @@ export default function MedicationPage() {
   const medications = useCareStore((s) => s.medications)
   const toggleMedication = useCareStore((s) => s.toggleMedication)
 
-  const takenCount = medications.filter((m) => m.status === 'taken').length
-  const pendingCount = medications.filter((m) => m.status === 'pending').length
-  const missedCount = medications.filter((m) => m.status === 'missed').length
+  const todayStr = new Date().toISOString().split('T')[0]
+  const todayMedications = medications.filter((m) => m.date === todayStr)
 
-  const sortedMedications = [...medications].sort((a, b) =>
+  const takenCount = todayMedications.filter((m) => m.status === 'taken').length
+  const pendingCount = todayMedications.filter((m) => m.status === 'pending').length
+  const missedCount = todayMedications.filter((m) => m.status === 'missed').length
+
+  const sortedMedications = [...todayMedications].sort((a, b) =>
     a.scheduledTime.localeCompare(b.scheduledTime)
   )
 
@@ -129,7 +132,7 @@ export default function MedicationPage() {
           药物总览
         </h2>
         <div className="grid grid-cols-2 gap-4">
-          {medications.map((med) => (
+          {sortedMedications.map((med) => (
             <div
               key={med.id}
               className="bg-gradient-to-br from-warm-50 to-care-50 rounded-2xl p-5 border border-warm-100 shadow-sm transition-all duration-300 hover:shadow-lg hover:border-care-200"

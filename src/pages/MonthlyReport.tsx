@@ -131,11 +131,12 @@ function computeHealthSummary(records: typeof healthRecords, start: string, end:
   return metrics
 }
 
-function computeMedicationSummary(medications: ReturnType<typeof useCareStore.getState>['medications']) {
-  const taken = medications.filter((m) => m.status === 'taken').length
-  const pending = medications.filter((m) => m.status === 'pending').length
-  const missed = medications.filter((m) => m.status === 'missed').length
-  const total = medications.length
+function computeMedicationSummary(medications: ReturnType<typeof useCareStore.getState>['medications'], start: string, end: string) {
+  const filtered = medications.filter((m) => m.date >= start && m.date <= end)
+  const taken = filtered.filter((m) => m.status === 'taken').length
+  const pending = filtered.filter((m) => m.status === 'pending').length
+  const missed = filtered.filter((m) => m.status === 'missed').length
+  const total = filtered.length
   const rate = total > 0 ? Math.round((taken / total) * 100) : 0
   return { taken, pending, missed, total, rate }
 }
@@ -174,7 +175,7 @@ export default function MonthlyReport() {
 
   const { start, end, label } = useMemo(() => getMonthRange(monthOffset), [monthOffset])
   const healthSummary = useMemo(() => computeHealthSummary(healthRecords, start, end), [start, end])
-  const medSummary = useMemo(() => computeMedicationSummary(medications), [medications])
+  const medSummary = useMemo(() => computeMedicationSummary(medications, start, end), [medications, start, end])
   const svcSummary = useMemo(() => computeServiceSummary(appointments, start, end), [appointments, start, end])
 
   const healthTrendData = useMemo(() => {
@@ -406,34 +407,39 @@ export default function MonthlyReport() {
             )}
           </div>
 
-          {svcSummary.total > 0 && (
+          {(svcSummary.total > 0 || medSummary.total > 0) && (
             <div className="mt-4 bg-gradient-to-br from-care-50 to-health-50 rounded-2xl p-5 border border-care-200">
               <h3 className="text-sm font-semibold text-warm-800 mb-3 flex items-center gap-2">
                 <FileText className="w-4 h-4 text-care-500" />
                 月度总结
               </h3>
               <div className="space-y-2 text-sm text-warm-700">
-                <p>
-                  本月共安排 <span className="font-semibold text-warm-900">{svcSummary.total}</span> 项社区服务，
-                  已完成 <span className="font-semibold text-emerald-600">{svcSummary.completed}</span> 项，
-                  {svcSummary.active > 0 ? (
-                    <>进行中 <span className="font-semibold text-care-600">{svcSummary.active}</span> 项，</>
-                  ) : null}
-                  {svcSummary.cancelled > 0 ? (
-                    <>取消/拒绝 <span className="font-semibold text-warm-500">{svcSummary.cancelled}</span> 项。</>
-                  ) : null}
-                  {svcSummary.cancelled === 0 && svcSummary.active === 0 && '全部完成。'}
-                </p>
-                <p>
-                  服药依从率为 <span className="font-semibold text-warm-900">{medSummary.rate}%</span>，
-                  {medSummary.rate >= 80 ? (
-                    <span className="text-health-600 font-medium">用药情况良好。</span>
-                  ) : medSummary.rate >= 50 ? (
-                    <span className="text-care-600 font-medium">用药情况需关注。</span>
-                  ) : (
-                    <span className="text-danger-600 font-medium">用药情况需重点关注，建议加强提醒。</span>
-                  )}
-                </p>
+                {svcSummary.total > 0 && (
+                  <p>
+                    本月共安排 <span className="font-semibold text-warm-900">{svcSummary.total}</span> 项社区服务，
+                    已完成 <span className="font-semibold text-emerald-600">{svcSummary.completed}</span> 项，
+                    {svcSummary.active > 0 ? (
+                      <>进行中 <span className="font-semibold text-care-600">{svcSummary.active}</span> 项，</>
+                    ) : null}
+                    {svcSummary.cancelled > 0 ? (
+                      <>取消/拒绝 <span className="font-semibold text-warm-500">{svcSummary.cancelled}</span> 项。</>
+                    ) : null}
+                    {svcSummary.cancelled === 0 && svcSummary.active === 0 && '全部完成。'}
+                  </p>
+                )}
+                {medSummary.total > 0 && (
+                  <p>
+                    本月共 <span className="font-semibold text-warm-900">{medSummary.total}</span> 条用药记录，
+                    服药依从率为 <span className="font-semibold text-warm-900">{medSummary.rate}%</span>，
+                    {medSummary.rate >= 80 ? (
+                      <span className="text-health-600 font-medium">用药情况良好。</span>
+                    ) : medSummary.rate >= 50 ? (
+                      <span className="text-care-600 font-medium">用药情况需关注。</span>
+                    ) : (
+                      <span className="text-danger-600 font-medium">用药情况需重点关注，建议加强提醒。</span>
+                    )}
+                  </p>
+                )}
                 {healthSummary.some((m) => m.trend === 'up') && (
                   <p>
                     健康指标中，{healthSummary.filter((m) => m.trend === 'up').map((m) => m.label).join('、')}

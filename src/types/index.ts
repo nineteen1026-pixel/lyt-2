@@ -33,6 +33,7 @@ export interface Medication {
   frequency: string
   scheduledTime: string
   status: MedicationStatus
+  date: string
   notes: string
 }
 

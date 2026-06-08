@@ -35,7 +35,9 @@ function formatDate() {
 export default function Dashboard() {
   const { medications, alerts, toggleMedication, resolveAlert } = useCareStore()
 
-  const pendingMedications = medications.filter((m) => m.status === 'pending')
+  const todayStr = new Date().toISOString().split('T')[0]
+  const todayMedications = medications.filter((m) => m.date === todayStr)
+  const pendingMedications = todayMedications.filter((m) => m.status === 'pending')
   const unresolvedAlerts = alerts.filter((a) => !a.resolved)
   const todayTasks = [
     ...pendingMedications.map((m) => ({ type: 'med' as const, id: m.id, title: `${m.name} ${m.dosage}`, time: m.scheduledTime, data: m })),

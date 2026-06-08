@@ -25,6 +25,7 @@ import {
   FileText,
   User,
   Phone,
+  Trash2,
   GitCommitHorizontal,
 } from 'lucide-react'
 import { useCareStore } from '@/store/useCareStore'
@@ -137,6 +138,7 @@ export default function FollowUp() {
     addFollowUpAppointment,
     confirmFollowUpAppointment,
     cancelFollowUpAppointment,
+    completeFollowUpVisit,
     completeSuggestion,
   } = useCareStore()
 
@@ -147,6 +149,24 @@ export default function FollowUp() {
   const [form, setForm] = useState(initialForm)
   const [expandedRecordId, setExpandedRecordId] = useState<string | null>(null)
   const [expandedSuggestionId, setExpandedSuggestionId] = useState<string | null>(null)
+  const [completingAppointmentId, setCompletingAppointmentId] = useState<string | null>(null)
+  const [visitForm, setVisitForm] = useState({
+    diagnosis: '',
+    bloodPressure: '',
+    heartRate: '',
+    bloodSugar: '',
+    temperature: '',
+    weight: '',
+    medicationAdjustments: '',
+    nextFollowUpDate: '',
+    notes: '',
+    suggestions: [] as Array<{
+      category: SuggestionCategory
+      priority: SuggestionPriority
+      title: string
+      content: string
+    }>,
+  })
 
   const filteredAppointments = useMemo(() => {
     const sorted = [...followUpAppointments].sort((a, b) => {
@@ -269,6 +289,69 @@ export default function FollowUp() {
     setShowForm(false)
   }
 
+  const openCompleteVisit = (aptId: string) => {
+    setCompletingAppointmentId(aptId)
+    setVisitForm({
+      diagnosis: '',
+      bloodPressure: '',
+      heartRate: '',
+      bloodSugar: '',
+      temperature: '',
+      weight: '',
+      medicationAdjustments: '',
+      nextFollowUpDate: '',
+      notes: '',
+      suggestions: [],
+    })
+  }
+
+  const handleCompleteVisit = () => {
+    if (!completingAppointmentId || !visitForm.diagnosis) return
+    completeFollowUpVisit({
+      appointmentId: completingAppointmentId,
+      diagnosis: visitForm.diagnosis,
+      vitalSigns: {
+        bloodPressure: visitForm.bloodPressure || undefined,
+        heartRate: visitForm.heartRate ? Number(visitForm.heartRate) : undefined,
+        bloodSugar: visitForm.bloodSugar ? Number(visitForm.bloodSugar) : undefined,
+        temperature: visitForm.temperature ? Number(visitForm.temperature) : undefined,
+        weight: visitForm.weight ? Number(visitForm.weight) : undefined,
+      },
+      medicationAdjustments: visitForm.medicationAdjustments,
+      nextFollowUpDate: visitForm.nextFollowUpDate || undefined,
+      notes: visitForm.notes,
+      suggestions: visitForm.suggestions,
+    })
+    setCompletingAppointmentId(null)
+    setActiveTab('records')
+  }
+
+  const addSuggestionToForm = () => {
+    setVisitForm((prev) => ({
+      ...prev,
+      suggestions: [
+        ...prev.suggestions,
+        { category: 'diet', priority: 'medium', title: '', content: '' },
+      ],
+    }))
+  }
+
+  const removeSuggestionFromForm = (index: number) => {
+    setVisitForm((prev) => ({
+      ...prev,
+      suggestions: prev.suggestions.filter((_, i) => i !== index),
+    }))
+  }
+
+  const updateSuggestionInForm = (index: number, field: string, value: string) => {
+    setVisitForm((prev) => ({
+      ...prev,
+      suggestions: prev.suggestions.map((s, i) =>
+        i === index ? { ...s, [field]: value } : s
+      ),
+    }))
+  }
+
   return (
     <div className="min-h-screen bg-warm-50 px-4 py-6 animate-fade-in">
       <div className="mx-auto max-w-2xl">
@@ -351,13 +434,12 @@ export default function FollowUp() {
                   const typeCfg = followUpTypeConfig[apt.followUpType]
                   const stCfg = appointmentStatusConfig[apt.status]
                   const TypeIcon = typeCfg.icon
-                  const isTerminal = ['completed', 'cancelled'].includes(apt.status)
 
                   return (
                     <div
                       key={apt.id}
                       className={`rounded-xl bg-white shadow-sm border border-warm-200 overflow-hidden animate-slide-up ${
-                        isTerminal ? 'opacity-75' : ''
+                        apt.status === 'cancelled' ? 'opacity-60' : ''
                       }`}
                       style={{ animationDelay: `${i * 50}ms` }}
                     >
@@ -420,22 +502,74 @@ export default function FollowUp() {
                         )}
 
                         {apt.status === 'confirmed' && (
-                          <div className="mt-3 rounded-lg bg-blue-50 border border-blue-200 p-2.5">
-                            <div className="flex items-center gap-2 text-sm text-blue-700">
-                              <CheckCircle2 size={14} />
-                              <span className="font-medium text-xs">预约已确认，请按时就诊</span>
+                          <div className="mt-3 space-y-2.5">
+                            <div className="rounded-lg bg-blue-50 border border-blue-200 p-2.5">
+                              <div className="flex items-center gap-2 text-sm text-blue-700">
+                                <CheckCircle2 size={14} />
+                                <span className="font-medium text-xs">预约已确认，请按时就诊</span>
+                              </div>
+                              {apt.notes && (
+                                <p className="text-xs text-blue-600 mt-1">提示：{apt.notes}</p>
+                              )}
                             </div>
-                            {apt.notes && (
-                              <p className="text-xs text-blue-600 mt-1">提示：{apt.notes}</p>
-                            )}
+                            <button
+                              onClick={() => openCompleteVisit(apt.id)}
+                              className="w-full rounded-lg bg-emerald-500 hover:bg-emerald-600 px-4 py-2.5 text-xs font-medium text-white transition-colors active:scale-95 flex items-center justify-center gap-1.5"
+                            >
+                              <CheckCircle2 size={14} />
+                              完成就诊
+                            </button>
                           </div>
                         )}
 
-                        {isTerminal && (
+                        {apt.status === 'completed' && (() => {
+                          const linkedRecord = followUpRecords.find((r) => r.appointmentId === apt.id)
+                          const linkedSuggestions = doctorSuggestions.filter((s) => s.recordId && linkedRecord && s.recordId === linkedRecord.id)
+                          return (
+                            <div className="mt-3 space-y-2">
+                              <div className="flex items-center gap-2 text-xs text-emerald-600">
+                                <CheckCircle2 size={14} />
+                                <span className="font-medium">就诊已完成</span>
+                              </div>
+                              {linkedRecord && (
+                                <div
+                                  className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 cursor-pointer hover:bg-emerald-100 transition-colors"
+                                  onClick={() => {
+                                    setActiveTab('records')
+                                    setExpandedRecordId(linkedRecord.id)
+                                  }}
+                                >
+                                  <p className="text-xs font-medium text-emerald-700 mb-1">随访记录</p>
+                                  <p className="text-xs text-emerald-600 line-clamp-2">{linkedRecord.diagnosis}</p>
+                                  {linkedRecord.nextFollowUpDate && (
+                                    <p className="text-xs text-emerald-500 mt-1">下次随访：{linkedRecord.nextFollowUpDate}</p>
+                                  )}
+                                </div>
+                              )}
+                              {linkedSuggestions.length > 0 && (
+                                <div
+                                  className="rounded-lg bg-blue-50 border border-blue-200 p-3 cursor-pointer hover:bg-blue-100 transition-colors"
+                                  onClick={() => setActiveTab('suggestions')}
+                                >
+                                  <p className="text-xs font-medium text-blue-700 mb-1">
+                                    医生建议 ({linkedSuggestions.length})
+                                  </p>
+                                  {linkedSuggestions.slice(0, 2).map((s) => (
+                                    <p key={s.id} className="text-xs text-blue-600 truncate">· {s.title}</p>
+                                  ))}
+                                  {linkedSuggestions.length > 2 && (
+                                    <p className="text-xs text-blue-400 mt-0.5">还有 {linkedSuggestions.length - 2} 条建议...</p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })()}
+
+                        {apt.status === 'cancelled' && (
                           <div className="mt-3 flex items-center gap-2 text-xs text-warm-400">
-                            {apt.status === 'completed' && <CheckCircle2 size={14} className="text-emerald-400" />}
-                            {apt.status === 'cancelled' && <XCircle size={14} className="text-warm-400" />}
-                            <span>{apt.status === 'completed' ? '就诊已完成' : '预约已取消'}</span>
+                            <XCircle size={14} className="text-warm-400" />
+                            <span>预约已取消</span>
                           </div>
                         )}
                       </div>
@@ -821,6 +955,237 @@ export default function FollowUp() {
           </div>
         </div>
       )}
+
+      {completingAppointmentId && (() => {
+        const apt = followUpAppointments.find((a) => a.id === completingAppointmentId)
+        if (!apt) return null
+        const typeCfg = followUpTypeConfig[apt.followUpType]
+        const suggestionCategoryOptions: { value: SuggestionCategory; label: string }[] = [
+          { value: 'diet', label: '饮食' },
+          { value: 'exercise', label: '运动' },
+          { value: 'medication', label: '用药' },
+          { value: 'lifestyle', label: '生活方式' },
+          { value: 'monitoring', label: '监测' },
+          { value: 'mental_health', label: '心理' },
+        ]
+        const priorityOptions: { value: SuggestionPriority; label: string }[] = [
+          { value: 'high', label: '重要' },
+          { value: 'medium', label: '一般' },
+          { value: 'low', label: '建议' },
+        ]
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 animate-fade-in" onClick={() => setCompletingAppointmentId(null)}>
+            <div
+              className="w-full max-w-lg mx-4 rounded-2xl bg-white shadow-xl animate-slide-up overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-6 py-4 border-b border-warm-100">
+                <h2 className="text-lg font-semibold text-warm-900 flex items-center gap-2">
+                  <Stethoscope size={20} className="text-emerald-500" />
+                  完成就诊
+                </h2>
+                <button onClick={() => setCompletingAppointmentId(null)} className="text-warm-400 hover:text-warm-600 transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="px-6 py-2 border-b border-warm-100 bg-warm-50">
+                <div className="flex items-center gap-2 text-xs text-warm-500">
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${typeCfg.bg} ${typeCfg.color}`}>
+                    {typeCfg.label}
+                  </span>
+                  <span>{apt.doctorName} · {apt.scheduledDate} {apt.scheduledTime}</span>
+                </div>
+              </div>
+
+              <div className="px-6 py-5 max-h-[65vh] overflow-y-auto space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-warm-700 mb-1.5">诊断结论 <span className="text-red-500">*</span></label>
+                  <textarea
+                    value={visitForm.diagnosis}
+                    onChange={(e) => setVisitForm({ ...visitForm, diagnosis: e.target.value })}
+                    placeholder="请输入诊断结论"
+                    rows={2}
+                    className="w-full rounded-lg border border-warm-300 px-3 py-2.5 text-sm text-warm-800 focus:border-care-500 focus:ring-1 focus:ring-care-500 outline-none transition-colors resize-none"
+                  />
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-warm-700 mb-2">体征数据</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-warm-500 mb-1">血压 (mmHg)</label>
+                      <input
+                        type="text"
+                        value={visitForm.bloodPressure}
+                        onChange={(e) => setVisitForm({ ...visitForm, bloodPressure: e.target.value })}
+                        placeholder="如 138/86"
+                        className="w-full rounded-lg border border-warm-300 px-3 py-2 text-sm text-warm-800 focus:border-care-500 focus:ring-1 focus:ring-care-500 outline-none transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-warm-500 mb-1">心率 (bpm)</label>
+                      <input
+                        type="number"
+                        value={visitForm.heartRate}
+                        onChange={(e) => setVisitForm({ ...visitForm, heartRate: e.target.value })}
+                        placeholder="如 74"
+                        className="w-full rounded-lg border border-warm-300 px-3 py-2 text-sm text-warm-800 focus:border-care-500 focus:ring-1 focus:ring-care-500 outline-none transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-warm-500 mb-1">血糖 (mmol/L)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={visitForm.bloodSugar}
+                        onChange={(e) => setVisitForm({ ...visitForm, bloodSugar: e.target.value })}
+                        placeholder="如 6.0"
+                        className="w-full rounded-lg border border-warm-300 px-3 py-2 text-sm text-warm-800 focus:border-care-500 focus:ring-1 focus:ring-care-500 outline-none transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-warm-500 mb-1">体温 (°C)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={visitForm.temperature}
+                        onChange={(e) => setVisitForm({ ...visitForm, temperature: e.target.value })}
+                        placeholder="如 36.5"
+                        className="w-full rounded-lg border border-warm-300 px-3 py-2 text-sm text-warm-800 focus:border-care-500 focus:ring-1 focus:ring-care-500 outline-none transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-warm-500 mb-1">体重 (kg)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={visitForm.weight}
+                        onChange={(e) => setVisitForm({ ...visitForm, weight: e.target.value })}
+                        placeholder="如 58.5"
+                        className="w-full rounded-lg border border-warm-300 px-3 py-2 text-sm text-warm-800 focus:border-care-500 focus:ring-1 focus:ring-care-500 outline-none transition-colors"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-warm-700 mb-1.5">用药调整</label>
+                  <textarea
+                    value={visitForm.medicationAdjustments}
+                    onChange={(e) => setVisitForm({ ...visitForm, medicationAdjustments: e.target.value })}
+                    placeholder="请描述用药调整方案"
+                    rows={2}
+                    className="w-full rounded-lg border border-warm-300 px-3 py-2.5 text-sm text-warm-800 focus:border-care-500 focus:ring-1 focus:ring-care-500 outline-none transition-colors resize-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-warm-700 mb-1.5">下次随访日期</label>
+                    <input
+                      type="date"
+                      value={visitForm.nextFollowUpDate}
+                      onChange={(e) => setVisitForm({ ...visitForm, nextFollowUpDate: e.target.value })}
+                      className="w-full rounded-lg border border-warm-300 px-3 py-2.5 text-sm text-warm-800 focus:border-care-500 focus:ring-1 focus:ring-care-500 outline-none transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-warm-700 mb-1.5">备注</label>
+                    <input
+                      type="text"
+                      value={visitForm.notes}
+                      onChange={(e) => setVisitForm({ ...visitForm, notes: e.target.value })}
+                      placeholder="补充说明"
+                      className="w-full rounded-lg border border-warm-300 px-3 py-2.5 text-sm text-warm-800 focus:border-care-500 focus:ring-1 focus:ring-care-500 outline-none transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-medium text-warm-700">医生建议</p>
+                    <button
+                      onClick={addSuggestionToForm}
+                      className="flex items-center gap-1 rounded-lg bg-blue-50 hover:bg-blue-100 px-3 py-1.5 text-xs font-medium text-blue-600 transition-colors"
+                    >
+                      <Plus size={12} />
+                      添加建议
+                    </button>
+                  </div>
+                  {visitForm.suggestions.length === 0 && (
+                    <p className="text-xs text-warm-400 bg-warm-50 rounded-lg p-3 text-center">
+                      暂无建议，可点击上方按钮添加
+                    </p>
+                  )}
+                  <div className="space-y-3">
+                    {visitForm.suggestions.map((sgst, idx) => (
+                      <div key={idx} className="rounded-lg border border-warm-200 bg-warm-50 p-3 relative">
+                        <button
+                          onClick={() => removeSuggestionFromForm(idx)}
+                          className="absolute top-2 right-2 text-warm-400 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                        <div className="grid grid-cols-2 gap-2 mb-2">
+                          <select
+                            value={sgst.category}
+                            onChange={(e) => updateSuggestionInForm(idx, 'category', e.target.value)}
+                            className="rounded-lg border border-warm-300 px-2.5 py-1.5 text-xs text-warm-800 focus:border-care-500 outline-none"
+                          >
+                            {suggestionCategoryOptions.map((opt) => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                          <select
+                            value={sgst.priority}
+                            onChange={(e) => updateSuggestionInForm(idx, 'priority', e.target.value)}
+                            className="rounded-lg border border-warm-300 px-2.5 py-1.5 text-xs text-warm-800 focus:border-care-500 outline-none"
+                          >
+                            {priorityOptions.map((opt) => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <input
+                          type="text"
+                          value={sgst.title}
+                          onChange={(e) => updateSuggestionInForm(idx, 'title', e.target.value)}
+                          placeholder="建议标题"
+                          className="w-full rounded-lg border border-warm-300 px-2.5 py-1.5 text-xs text-warm-800 focus:border-care-500 outline-none mb-2"
+                        />
+                        <textarea
+                          value={sgst.content}
+                          onChange={(e) => updateSuggestionInForm(idx, 'content', e.target.value)}
+                          placeholder="建议详细内容"
+                          rows={2}
+                          className="w-full rounded-lg border border-warm-300 px-2.5 py-1.5 text-xs text-warm-800 focus:border-care-500 outline-none resize-none"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-6 py-4 border-t border-warm-100 flex justify-end gap-3">
+                <button
+                  onClick={() => setCompletingAppointmentId(null)}
+                  className="rounded-lg border border-warm-300 px-5 py-2.5 text-sm font-medium text-warm-600 hover:bg-warm-50 transition-colors"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleCompleteVisit}
+                  disabled={!visitForm.diagnosis}
+                  className="rounded-lg bg-emerald-500 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-600 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  完成就诊
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

@@ -65,6 +65,20 @@ interface CareStore {
   confirmFollowUpAppointment: (id: string) => void
   cancelFollowUpAppointment: (id: string) => void
   completeFollowUpAppointment: (id: string) => void
+  completeFollowUpVisit: (params: {
+    appointmentId: string
+    diagnosis: string
+    vitalSigns: FollowUpRecord['vitalSigns']
+    medicationAdjustments: string
+    nextFollowUpDate?: string
+    notes: string
+    suggestions: Array<{
+      category: import('@/types').SuggestionCategory
+      priority: import('@/types').SuggestionPriority
+      title: string
+      content: string
+    }>
+  }) => void
   addFollowUpRecord: (record: FollowUpRecord) => void
   completeSuggestion: (id: string) => void
   addSuggestion: (suggestion: DoctorSuggestion) => void
@@ -322,6 +336,61 @@ export const useCareStore = create<CareStore>((set) => ({
           : a
       ),
     })),
+  completeFollowUpVisit: (params) =>
+    set((state) => {
+      const apt = state.followUpAppointments.find((a) => a.id === params.appointmentId)
+      if (!apt) return state
+
+      const nowStr = new Date().toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).replace(/\//g, '-')
+
+      const todayDate = new Date().toISOString().slice(0, 10)
+
+      const record: FollowUpRecord = {
+        id: `fr${Date.now()}`,
+        elderlyId: apt.elderlyId,
+        appointmentId: apt.id,
+        doctorId: apt.doctorId,
+        doctorName: apt.doctorName,
+        followUpType: apt.followUpType,
+        visitDate: todayDate,
+        diagnosis: params.diagnosis,
+        vitalSigns: params.vitalSigns,
+        medicationAdjustments: params.medicationAdjustments,
+        nextFollowUpDate: params.nextFollowUpDate,
+        notes: params.notes,
+        createdAt: nowStr,
+      }
+
+      const newSuggestions: DoctorSuggestion[] = params.suggestions.map((s, i) => ({
+        id: `ds${Date.now()}_${i}`,
+        elderlyId: apt.elderlyId,
+        doctorId: apt.doctorId,
+        doctorName: apt.doctorName,
+        recordId: record.id,
+        category: s.category,
+        priority: s.priority,
+        title: s.title,
+        content: s.content,
+        isActive: true,
+        createdAt: nowStr,
+      }))
+
+      return {
+        followUpAppointments: state.followUpAppointments.map((a) =>
+          a.id === params.appointmentId
+            ? { ...a, status: 'completed' as FollowUpAppointmentStatus }
+            : a
+        ),
+        followUpRecords: [record, ...state.followUpRecords],
+        doctorSuggestions: [...newSuggestions, ...state.doctorSuggestions],
+      }
+    }),
   addFollowUpRecord: (record: FollowUpRecord) =>
     set((state) => ({
       followUpRecords: [record, ...state.followUpRecords],

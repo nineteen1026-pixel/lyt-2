@@ -1,19 +1,15 @@
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { HeartPulse, Pill, AlertTriangle, Users, Activity, Thermometer, Droplets, ChevronRight, XCircle } from 'lucide-react'
+import { HeartPulse, Pill, AlertTriangle, Users, Activity, Thermometer, Droplets, ChevronRight, XCircle, ShieldCheck, ArrowRight } from 'lucide-react'
 import { elderly, healthRecords } from '@/data/mockData'
 import { useCareStore } from '@/store/useCareStore'
+import { assessRisk, getRiskLevelConfig } from '@/lib/riskEngine'
 import type { ElderlyStatus, AlertLevel, MedicationStatus } from '@/types'
 
 const statusConfig: Record<ElderlyStatus, { label: string; color: string; bg: string; ring: string }> = {
   normal: { label: '状态良好', color: 'text-health-600', bg: 'bg-health-100', ring: 'ring-health-400' },
   warning: { label: '需要关注', color: 'text-care-600', bg: 'bg-care-100', ring: 'ring-care-400' },
   alert: { label: '紧急告警', color: 'text-danger-600', bg: 'bg-danger-100', ring: 'ring-danger-400' },
-}
-
-const alertColorMap: Record<AlertLevel, string> = {
-  urgent: 'border-l-danger-500',
-  warning: 'border-l-care-400',
-  info: 'border-l-info-400',
 }
 
 function getLatestRecord(type: string) {
@@ -34,6 +30,12 @@ function formatDate() {
 
 export default function Dashboard() {
   const { medications, alerts, toggleMedication, resolveAlert } = useCareStore()
+
+  const riskAssessment = useMemo(
+    () => assessRisk('1', healthRecords, alerts, medications),
+    [alerts, medications]
+  )
+  const riskCfg = getRiskLevelConfig(riskAssessment.overallRisk)
 
   const todayStr = new Date().toISOString().split('T')[0]
   const todayMedications = medications.filter((m) => m.date === todayStr)
@@ -108,6 +110,36 @@ export default function Dashboard() {
             </div>
           ))}
         </section>
+
+        <Link
+          to="/risk-stratification"
+          className={`block rounded-2xl p-4 shadow-sm border-2 transition-all hover:shadow-md animate-slide-up ${
+            riskAssessment.overallRisk === 'low' ? 'bg-health-50 border-health-200' :
+            riskAssessment.overallRisk === 'medium' ? 'bg-care-50 border-care-200' : 'bg-danger-50 border-danger-200'
+          }`}
+          style={{ animationDelay: '0.07s' }}
+        >
+          <div className="flex items-center gap-3">
+            <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
+              riskAssessment.overallRisk === 'low' ? 'bg-health-100' :
+              riskAssessment.overallRisk === 'medium' ? 'bg-care-100' : 'bg-danger-100'
+            }`}>
+              <ShieldCheck className={`w-5 h-5 ${riskCfg.color}`} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-warm-800">风险分层</span>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${riskCfg.bg} ${riskCfg.color}`}>
+                  {riskCfg.label}
+                </span>
+              </div>
+              <p className="text-xs text-warm-500 mt-0.5">
+                综合评分 {riskAssessment.totalScore} · {riskAssessment.notificationStrategy.label} · 点击查看详情
+              </p>
+            </div>
+            <ArrowRight className="w-4 h-4 text-warm-300 shrink-0" />
+          </div>
+        </Link>
 
         <section className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
           <h3 className="text-base font-semibold text-warm-700 mb-3">今日待办</h3>

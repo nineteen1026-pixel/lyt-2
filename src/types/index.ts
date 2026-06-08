@@ -76,6 +76,38 @@ export type AppointmentStatus =
   | 'family_rejected'
   | 'cancelled'
 
+export type RiskLevel = 'low' | 'medium' | 'high'
+
+export interface RiskFactor {
+  key: string
+  label: string
+  score: number
+  maxScore: number
+  level: RiskLevel
+  description: string
+  icon: string
+}
+
+export interface FamilyNotificationStrategy {
+  riskLevel: RiskLevel
+  label: string
+  description: string
+  channels: string[]
+  frequency: string
+  triggerEvents: string[]
+  emergencyAction: string
+}
+
+export interface RiskAssessment {
+  elderlyId: string
+  overallRisk: RiskLevel
+  totalScore: number
+  maxTotalScore: number
+  factors: RiskFactor[]
+  notificationStrategy: FamilyNotificationStrategy
+  assessedAt: string
+}
+
 export interface Appointment {
   id: string
   elderlyId: string

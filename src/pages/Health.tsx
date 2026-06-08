@@ -1,7 +1,11 @@
 import { useState, useMemo } from 'react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, ReferenceLine } from 'recharts'
+import { Link } from 'react-router-dom'
+import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, ReferenceLine } from 'recharts'
+import { ShieldCheck, ArrowRight } from 'lucide-react'
 import type { HealthMetricType, HealthRecord } from '@/types'
 import { healthRecords } from '@/data/mockData'
+import { useCareStore } from '@/store/useCareStore'
+import { assessRisk, getRiskLevelConfig } from '@/lib/riskEngine'
 
 const TABS: { key: HealthMetricType; label: string; unit: string }[] = [
   { key: 'bloodPressure', label: '血压', unit: 'mmHg' },
@@ -54,6 +58,23 @@ function formatValue(record: HealthRecord): string {
 
 export default function Health() {
   const [activeTab, setActiveTab] = useState<HealthMetricType>('bloodPressure')
+  const { alerts, medications } = useCareStore()
+
+  const riskAssessment = useMemo(
+    () => assessRisk('1', healthRecords, alerts, medications),
+    [alerts, medications]
+  )
+  const riskCfg = getRiskLevelConfig(riskAssessment.overallRisk)
+
+  const activeRiskFactor = useMemo(
+    () => riskAssessment.factors.find(f =>
+      (activeTab === 'bloodPressure' && f.key === 'bloodPressure') ||
+      (activeTab === 'heartRate' && f.key === 'heartRate') ||
+      (activeTab === 'bloodSugar' && f.key === 'bloodSugar') ||
+      (activeTab === 'temperature' && f.key === 'bloodSugar')
+    ),
+    [riskAssessment, activeTab]
+  )
 
   const chartData = useMemo(() => {
     const filtered = healthRecords
@@ -108,6 +129,32 @@ export default function Health() {
         <h1 className="text-2xl font-bold text-warm-900">健康记录</h1>
         <p className="mt-1 text-sm text-warm-500">查看老人近期健康数据趋势</p>
       </div>
+
+      <Link
+        to="/risk-stratification"
+        className={`flex items-center gap-3 rounded-xl p-3.5 shadow-sm border-2 transition-all hover:shadow-md animate-slide-up ${
+          riskAssessment.overallRisk === 'low' ? 'bg-health-50 border-health-200' :
+          riskAssessment.overallRisk === 'medium' ? 'bg-care-50 border-care-200' : 'bg-danger-50 border-danger-200'
+        }`}
+      >
+        <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${riskCfg.bg}`}>
+          <ShieldCheck className={`w-4.5 h-4.5 ${riskCfg.color}`} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-warm-800">风险分层</span>
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${riskCfg.bg} ${riskCfg.color}`}>
+              {riskCfg.label}
+            </span>
+          </div>
+          {activeRiskFactor && (
+            <p className="text-xs text-warm-500 mt-0.5">
+              当前指标风险：{activeRiskFactor.description}
+            </p>
+          )}
+        </div>
+        <ArrowRight className="w-4 h-4 text-warm-300 shrink-0" />
+      </Link>
 
       <div className="flex gap-2">
         {TABS.map(tab => (

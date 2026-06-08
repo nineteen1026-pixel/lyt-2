@@ -8,11 +8,15 @@ import {
   ShieldCheck,
   CalendarCheck,
   FileText,
+  ShieldAlert,
 } from 'lucide-react'
 import { useCareStore } from '@/store/useCareStore'
+import { healthRecords } from '@/data/mockData'
+import { assessRisk, getRiskLevelConfig } from '@/lib/riskEngine'
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: '首页概览' },
+  { to: '/risk-stratification', icon: ShieldAlert, label: '风险分层' },
   { to: '/health', icon: HeartPulse, label: '健康记录' },
   { to: '/medication', icon: Pill, label: '用药提醒' },
   { to: '/alerts', icon: AlertTriangle, label: '异常告警' },
@@ -28,6 +32,11 @@ export default function Layout() {
   const pendingFamilyConfirm = useCareStore(
     (s) => s.appointments.filter((a) => a.status === 'family_pending').length
   )
+  const riskState = useCareStore((s) => {
+    const assessment = assessRisk('1', healthRecords, s.alerts, s.medications)
+    return { level: assessment.overallRisk, score: assessment.totalScore }
+  })
+  const riskCfg = getRiskLevelConfig(riskState.level)
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -77,10 +86,16 @@ export default function Layout() {
             <div className="w-7 h-7 rounded-full bg-care-500/20 flex items-center justify-center text-care-400 text-xs font-semibold">
               张
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <p className="text-sm text-warm-100 font-medium leading-tight">张秀兰</p>
               <p className="text-xs text-warm-500">78岁 · 女</p>
             </div>
+            <NavLink
+              to="/risk-stratification"
+              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${riskCfg.bg} ${riskCfg.color}`}
+            >
+              {riskCfg.label}
+            </NavLink>
           </div>
         </div>
       </aside>

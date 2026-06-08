@@ -1,6 +1,9 @@
 import { useState, useMemo } from 'react'
-import { AlertTriangle, AlertCircle, Info, ShieldCheck, CheckCircle2, Filter } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { AlertTriangle, AlertCircle, Info, ShieldCheck, CheckCircle2, Filter, ArrowRight } from 'lucide-react'
 import { useCareStore } from '@/store/useCareStore'
+import { healthRecords } from '@/data/mockData'
+import { assessRisk, getRiskLevelConfig } from '@/lib/riskEngine'
 import type { AlertLevel } from '@/types'
 
 const levelConfig: Record<AlertLevel, { label: string; icon: typeof AlertTriangle; badge: string; border: string; iconColor: string }> = {
@@ -17,9 +20,15 @@ const filterTabs: { key: AlertLevel | 'all'; label: string }[] = [
 ]
 
 export default function Alerts() {
-  const { alerts, resolveAlert } = useCareStore()
+  const { alerts, medications, resolveAlert } = useCareStore()
   const [activeTab, setActiveTab] = useState<AlertLevel | 'all'>('all')
   const [showUnresolvedOnly, setShowUnresolvedOnly] = useState(false)
+
+  const riskAssessment = useMemo(
+    () => assessRisk('1', healthRecords, alerts, medications),
+    [alerts, medications]
+  )
+  const riskCfg = getRiskLevelConfig(riskAssessment.overallRisk)
 
   const unresolved = useMemo(() => alerts.filter((a) => !a.resolved), [alerts])
   const urgentUnresolved = useMemo(() => unresolved.filter((a) => a.level === 'urgent'), [unresolved])
@@ -61,6 +70,39 @@ export default function Alerts() {
             <p className="text-2xl font-bold text-info-500">{todayAlerts.length}</p>
           </div>
         </div>
+
+        <Link
+          to="/risk-stratification"
+          className={`mb-6 flex items-center gap-4 rounded-xl p-4 shadow-sm border-2 transition-all hover:shadow-md animate-slide-up ${
+            riskAssessment.overallRisk === 'low' ? 'bg-health-50 border-health-200' :
+            riskAssessment.overallRisk === 'medium' ? 'bg-care-50 border-care-200' : 'bg-danger-50 border-danger-200'
+          }`}
+          style={{ animationDelay: '200ms' }}
+        >
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${riskCfg.bg}`}>
+            <ShieldCheck className={`w-5 h-5 ${riskCfg.color}`} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-warm-800">当前风险等级</span>
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${riskCfg.bg} ${riskCfg.color}`}>
+                {riskCfg.label}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-xs text-warm-500">家属提醒：</span>
+              <div className="flex items-center gap-1">
+                {riskAssessment.notificationStrategy.channels.slice(0, 3).map((ch) => (
+                  <span key={ch} className="text-[10px] text-warm-400 bg-warm-100 rounded px-1.5 py-0.5">
+                    {ch}
+                  </span>
+                ))}
+              </div>
+              <span className="text-xs text-warm-500">· {riskAssessment.notificationStrategy.frequency}</span>
+            </div>
+          </div>
+          <ArrowRight className="w-4 h-4 text-warm-300 shrink-0" />
+        </Link>
 
         <div className="mb-6 flex items-center justify-between gap-3">
           <div className="flex gap-1 rounded-full bg-warm-200/60 p-1">
@@ -147,7 +189,6 @@ export default function Alerts() {
             </h2>
             <div className="space-y-3">
               {resolvedAlerts.map((alert, i) => {
-                const cfg = levelConfig[alert.level]
                 return (
                   <div
                     key={alert.id}

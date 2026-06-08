@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   Users,
   ShieldCheck,
+  CalendarCheck,
 } from 'lucide-react'
 import { useCareStore } from '@/store/useCareStore'
 
@@ -14,12 +15,16 @@ const navItems = [
   { to: '/health', icon: HeartPulse, label: '健康记录' },
   { to: '/medication', icon: Pill, label: '用药提醒' },
   { to: '/alerts', icon: AlertTriangle, label: '异常告警' },
+  { to: '/community-service', icon: CalendarCheck, label: '社区服务' },
   { to: '/contacts', icon: Users, label: '家属联系人' },
 ]
 
 export default function Layout() {
   const unresolvedAlerts = useCareStore(
     (s) => s.alerts.filter((a) => !a.resolved).length
+  )
+  const pendingFamilyConfirm = useCareStore(
+    (s) => s.appointments.filter((a) => a.status === 'family_pending').length
   )
 
   return (
@@ -54,6 +59,11 @@ export default function Layout() {
               {item.to === '/alerts' && unresolvedAlerts > 0 && (
                 <span className="ml-auto bg-danger-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
                   {unresolvedAlerts}
+                </span>
+              )}
+              {item.to === '/community-service' && pendingFamilyConfirm > 0 && (
+                <span className="ml-auto bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+                  {pendingFamilyConfirm}
                 </span>
               )}
             </NavLink>

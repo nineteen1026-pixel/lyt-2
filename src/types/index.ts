@@ -57,3 +57,41 @@ export interface Contact {
   isEmergency: boolean
   avatar: string
 }
+
+export type ServiceType =
+  | 'home_care'
+  | 'medical_assist'
+  | 'housekeeping'
+  | 'accompany'
+  | 'psychological'
+  | 'emergency'
+
+export type AppointmentStatus =
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'family_pending'
+  | 'family_confirmed'
+  | 'family_rejected'
+  | 'completed'
+  | 'cancelled'
+
+export interface Appointment {
+  id: string
+  elderlyId: string
+  serviceType: ServiceType
+  title: string
+  description: string
+  appointmentDate: string
+  appointmentTime: string
+  address: string
+  status: AppointmentStatus
+  applicantName: string
+  applicantPhone: string
+  familyContactId: string
+  familyConfirmed: boolean
+  familyConfirmTime?: string
+  rejectReason?: string
+  createdAt: string
+  notes: string
+}

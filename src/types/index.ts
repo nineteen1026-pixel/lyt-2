@@ -205,3 +205,81 @@ export interface TaskReminder {
   createdAt: string
   dismissedAt?: string
 }
+
+export type FollowUpAppointmentStatus =
+  | 'scheduled'
+  | 'confirmed'
+  | 'in_progress'
+  | 'completed'
+  | 'cancelled'
+
+export type FollowUpType =
+  | 'chronic_disease'
+  | 'post_surgery'
+  | 'health_checkup'
+  | 'medication_review'
+  | 'rehabilitation'
+  | 'mental_health'
+
+export interface FollowUpAppointment {
+  id: string
+  elderlyId: string
+  doctorId: string
+  doctorName: string
+  doctorTitle: string
+  followUpType: FollowUpType
+  scheduledDate: string
+  scheduledTime: string
+  status: FollowUpAppointmentStatus
+  location: string
+  symptoms: string
+  notes: string
+  createdAt: string
+}
+
+export interface FollowUpRecord {
+  id: string
+  elderlyId: string
+  appointmentId: string
+  doctorId: string
+  doctorName: string
+  followUpType: FollowUpType
+  visitDate: string
+  diagnosis: string
+  vitalSigns: {
+    bloodPressure?: string
+    heartRate?: number
+    bloodSugar?: number
+    temperature?: number
+    weight?: number
+  }
+  medicationAdjustments: string
+  nextFollowUpDate?: string
+  notes: string
+  createdAt: string
+}
+
+export type SuggestionCategory =
+  | 'diet'
+  | 'exercise'
+  | 'medication'
+  | 'lifestyle'
+  | 'monitoring'
+  | 'mental_health'
+
+export type SuggestionPriority = 'high' | 'medium' | 'low'
+
+export interface DoctorSuggestion {
+  id: string
+  elderlyId: string
+  doctorId: string
+  doctorName: string
+  recordId?: string
+  category: SuggestionCategory
+  priority: SuggestionPriority
+  title: string
+  content: string
+  isActive: boolean
+  createdAt: string
+  completedAt?: string
+}

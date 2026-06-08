@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import type { Alert, Medication, Appointment, AppointmentStatus, CareTask, CareTaskStatus, TodoItem, TodoSyncStatus, CheckInRecord, TaskReminder, ReminderStatus } from '@/types'
-import { alerts as mockAlerts, medications as mockMedications, appointments as mockAppointments, careTasks as mockCareTasks, todoItems as mockTodoItems, checkInRecords as mockCheckInRecords, taskReminders as mockTaskReminders } from '@/data/mockData'
+import type { Alert, Medication, Appointment, AppointmentStatus, CareTask, CareTaskStatus, TodoItem, TodoSyncStatus, CheckInRecord, TaskReminder, ReminderStatus, FollowUpAppointment, FollowUpAppointmentStatus, FollowUpRecord, DoctorSuggestion } from '@/types'
+import { alerts as mockAlerts, medications as mockMedications, appointments as mockAppointments, careTasks as mockCareTasks, todoItems as mockTodoItems, checkInRecords as mockCheckInRecords, taskReminders as mockTaskReminders, followUpAppointments as mockFollowUpAppointments, followUpRecords as mockFollowUpRecords, doctorSuggestions as mockDoctorSuggestions } from '@/data/mockData'
 
 const VALID_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
   pending: ['family_pending', 'rejected'],
@@ -14,6 +14,18 @@ const VALID_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
 
 function canTransition(current: AppointmentStatus, target: AppointmentStatus): boolean {
   return VALID_TRANSITIONS[current].includes(target)
+}
+
+const FOLLOW_UP_TRANSITIONS: Record<FollowUpAppointmentStatus, FollowUpAppointmentStatus[]> = {
+  scheduled: ['confirmed', 'cancelled'],
+  confirmed: ['in_progress', 'cancelled'],
+  in_progress: ['completed'],
+  completed: [],
+  cancelled: [],
+}
+
+function canTransitionFollowUp(current: FollowUpAppointmentStatus, target: FollowUpAppointmentStatus): boolean {
+  return FOLLOW_UP_TRANSITIONS[current].includes(target)
 }
 
 interface CareStore {
@@ -46,6 +58,16 @@ interface CareStore {
   dismissReminder: (id: string) => void
   escalateReminder: (id: string) => void
   addReminder: (reminder: TaskReminder) => void
+  followUpAppointments: FollowUpAppointment[]
+  followUpRecords: FollowUpRecord[]
+  doctorSuggestions: DoctorSuggestion[]
+  addFollowUpAppointment: (appointment: FollowUpAppointment) => void
+  confirmFollowUpAppointment: (id: string) => void
+  cancelFollowUpAppointment: (id: string) => void
+  completeFollowUpAppointment: (id: string) => void
+  addFollowUpRecord: (record: FollowUpRecord) => void
+  completeSuggestion: (id: string) => void
+  addSuggestion: (suggestion: DoctorSuggestion) => void
 }
 
 export const useCareStore = create<CareStore>((set) => ({
@@ -56,6 +78,9 @@ export const useCareStore = create<CareStore>((set) => ({
   todoItems: mockTodoItems,
   checkInRecords: mockCheckInRecords,
   taskReminders: mockTaskReminders,
+  followUpAppointments: mockFollowUpAppointments,
+  followUpRecords: mockFollowUpRecords,
+  doctorSuggestions: mockDoctorSuggestions,
   resolveAlert: (id: string) =>
     set((state) => ({
       alerts: state.alerts.map((a) =>
@@ -268,5 +293,59 @@ export const useCareStore = create<CareStore>((set) => ({
   addReminder: (reminder: TaskReminder) =>
     set((state) => ({
       taskReminders: [reminder, ...state.taskReminders],
+    })),
+  addFollowUpAppointment: (appointment: FollowUpAppointment) =>
+    set((state) => ({
+      followUpAppointments: [appointment, ...state.followUpAppointments],
+    })),
+  confirmFollowUpAppointment: (id: string) =>
+    set((state) => ({
+      followUpAppointments: state.followUpAppointments.map((a) =>
+        a.id === id && canTransitionFollowUp(a.status, 'confirmed')
+          ? { ...a, status: 'confirmed' as FollowUpAppointmentStatus }
+          : a
+      ),
+    })),
+  cancelFollowUpAppointment: (id: string) =>
+    set((state) => ({
+      followUpAppointments: state.followUpAppointments.map((a) =>
+        a.id === id && canTransitionFollowUp(a.status, 'cancelled')
+          ? { ...a, status: 'cancelled' as FollowUpAppointmentStatus }
+          : a
+      ),
+    })),
+  completeFollowUpAppointment: (id: string) =>
+    set((state) => ({
+      followUpAppointments: state.followUpAppointments.map((a) =>
+        a.id === id && canTransitionFollowUp(a.status, 'completed')
+          ? { ...a, status: 'completed' as FollowUpAppointmentStatus }
+          : a
+      ),
+    })),
+  addFollowUpRecord: (record: FollowUpRecord) =>
+    set((state) => ({
+      followUpRecords: [record, ...state.followUpRecords],
+    })),
+  completeSuggestion: (id: string) =>
+    set((state) => ({
+      doctorSuggestions: state.doctorSuggestions.map((s) =>
+        s.id === id
+          ? {
+              ...s,
+              isActive: false,
+              completedAt: new Date().toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+              }).replace(/\//g, '-'),
+            }
+          : s
+      ),
+    })),
+  addSuggestion: (suggestion: DoctorSuggestion) =>
+    set((state) => ({
+      doctorSuggestions: [suggestion, ...state.doctorSuggestions],
     })),
 }))

@@ -11,6 +11,7 @@ import {
   ShieldAlert,
   CalendarDays,
   Handshake,
+  Stethoscope,
 } from 'lucide-react'
 import { useCareStore } from '@/store/useCareStore'
 import { healthRecords } from '@/data/mockData'
@@ -20,6 +21,7 @@ const navItems = [
   { to: '/', icon: LayoutDashboard, label: '首页概览' },
   { to: '/risk-stratification', icon: ShieldAlert, label: '风险分层' },
   { to: '/health', icon: HeartPulse, label: '健康记录' },
+  { to: '/follow-up', icon: Stethoscope, label: '家庭医生' },
   { to: '/medication', icon: Pill, label: '用药提醒' },
   { to: '/alerts', icon: AlertTriangle, label: '异常告警' },
   { to: '/schedule', icon: CalendarDays, label: '照护排班' },
@@ -42,11 +44,14 @@ export default function Layout() {
   const activeReminders = useCareStore(
     (s) => s.taskReminders.filter((r) => r.status === 'active').length
   )
-  const riskState = useCareStore((s) => {
+  const upcomingFollowUp = useCareStore(
+    (s) => s.followUpAppointments.filter((a) => ['scheduled', 'confirmed'].includes(a.status)).length
+  )
+  const riskLevel = useCareStore((s) => {
     const assessment = assessRisk('1', healthRecords, s.alerts, s.medications)
-    return { level: assessment.overallRisk, score: assessment.totalScore }
+    return assessment.overallRisk
   })
-  const riskCfg = getRiskLevelConfig(riskState.level)
+  const riskCfg = getRiskLevelConfig(riskLevel)
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -95,6 +100,11 @@ export default function Layout() {
               {item.to === '/family-care-task' && activeReminders > 0 && (
                 <span className="ml-auto bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
                   {activeReminders}
+                </span>
+              )}
+              {item.to === '/follow-up' && upcomingFollowUp > 0 && (
+                <span className="ml-auto bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+                  {upcomingFollowUp}
                 </span>
               )}
             </NavLink>

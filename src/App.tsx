@@ -10,6 +10,7 @@ import MonthlyReport from "@/pages/MonthlyReport";
 import RiskStratification from "@/pages/RiskStratification";
 import Schedule from "@/pages/Schedule";
 import FamilyCareTask from "@/pages/FamilyCareTask";
+import FollowUp from "@/pages/FollowUp";
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="/risk-stratification" element={<RiskStratification />} />
           <Route path="/schedule" element={<Schedule />} />
           <Route path="/family-care-task" element={<FamilyCareTask />} />
+          <Route path="/follow-up" element={<FollowUp />} />
         </Route>
       </Routes>
     </Router>

@@ -2,6 +2,20 @@ import { create } from 'zustand'
 import type { Alert, Medication, Appointment, AppointmentStatus } from '@/types'
 import { alerts as mockAlerts, medications as mockMedications, appointments as mockAppointments } from '@/data/mockData'
 
+const VALID_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
+  pending: ['family_pending', 'rejected'],
+  family_pending: ['family_confirmed', 'family_rejected', 'cancelled'],
+  family_confirmed: ['completed', 'cancelled'],
+  completed: [],
+  rejected: [],
+  family_rejected: [],
+  cancelled: [],
+}
+
+function canTransition(current: AppointmentStatus, target: AppointmentStatus): boolean {
+  return VALID_TRANSITIONS[current].includes(target)
+}
+
 interface CareStore {
   alerts: Alert[]
   medications: Medication[]
@@ -38,19 +52,23 @@ export const useCareStore = create<CareStore>((set) => ({
   approveAppointment: (id: string) =>
     set((state) => ({
       appointments: state.appointments.map((a) =>
-        a.id === id ? { ...a, status: 'family_pending' as AppointmentStatus } : a
+        a.id === id && canTransition(a.status, 'family_pending')
+          ? { ...a, status: 'family_pending' as AppointmentStatus }
+          : a
       ),
     })),
   rejectAppointment: (id: string, reason: string) =>
     set((state) => ({
       appointments: state.appointments.map((a) =>
-        a.id === id ? { ...a, status: 'rejected' as AppointmentStatus, rejectReason: reason } : a
+        a.id === id && canTransition(a.status, 'rejected')
+          ? { ...a, status: 'rejected' as AppointmentStatus, rejectReason: reason }
+          : a
       ),
     })),
   familyConfirmAppointment: (id: string) =>
     set((state) => ({
       appointments: state.appointments.map((a) =>
-        a.id === id
+        a.id === id && canTransition(a.status, 'family_confirmed')
           ? {
               ...a,
               status: 'family_confirmed' as AppointmentStatus,
@@ -69,7 +87,7 @@ export const useCareStore = create<CareStore>((set) => ({
   familyRejectAppointment: (id: string, reason: string) =>
     set((state) => ({
       appointments: state.appointments.map((a) =>
-        a.id === id
+        a.id === id && canTransition(a.status, 'family_rejected')
           ? {
               ...a,
               status: 'family_rejected' as AppointmentStatus,
@@ -82,13 +100,17 @@ export const useCareStore = create<CareStore>((set) => ({
   completeAppointment: (id: string) =>
     set((state) => ({
       appointments: state.appointments.map((a) =>
-        a.id === id ? { ...a, status: 'completed' as AppointmentStatus } : a
+        a.id === id && canTransition(a.status, 'completed')
+          ? { ...a, status: 'completed' as AppointmentStatus }
+          : a
       ),
     })),
   cancelAppointment: (id: string) =>
     set((state) => ({
       appointments: state.appointments.map((a) =>
-        a.id === id ? { ...a, status: 'cancelled' as AppointmentStatus } : a
+        a.id === id && canTransition(a.status, 'cancelled')
+          ? { ...a, status: 'cancelled' as AppointmentStatus }
+          : a
       ),
     })),
   addAppointment: (appointment: Appointment) =>

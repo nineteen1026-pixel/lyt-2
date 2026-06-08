@@ -279,7 +279,7 @@ export const appointments: Appointment[] = [
     appointmentDate: '2026-06-12',
     appointmentTime: '08:30',
     address: '市第一人民医院',
-    status: 'approved',
+    status: 'family_confirmed',
     applicantName: '张美华',
     applicantPhone: '139-0000-5678',
     familyContactId: 'c2',

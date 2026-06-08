@@ -68,12 +68,11 @@ export type ServiceType =
 
 export type AppointmentStatus =
   | 'pending'
-  | 'approved'
-  | 'rejected'
   | 'family_pending'
   | 'family_confirmed'
-  | 'family_rejected'
   | 'completed'
+  | 'rejected'
+  | 'family_rejected'
   | 'cancelled'
 
 export interface Appointment {

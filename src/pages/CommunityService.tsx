@@ -17,6 +17,8 @@ import {
   ChevronUp,
   UserCheck,
   FileText,
+  ClipboardCheck,
+  Users,
 } from 'lucide-react'
 import { useCareStore } from '@/store/useCareStore'
 import { contacts } from '@/data/mockData'
@@ -33,13 +35,105 @@ const serviceTypeConfig: Record<ServiceType, { label: string; icon: typeof Home;
 
 const statusConfig: Record<AppointmentStatus, { label: string; badge: string; dot: string }> = {
   pending: { label: '待审核', badge: 'bg-amber-100 text-amber-700', dot: 'bg-amber-400' },
-  approved: { label: '已通过', badge: 'bg-blue-100 text-blue-700', dot: 'bg-blue-400' },
-  rejected: { label: '已拒绝', badge: 'bg-red-100 text-red-700', dot: 'bg-red-400' },
   family_pending: { label: '待家属确认', badge: 'bg-orange-100 text-orange-700', dot: 'bg-orange-400' },
   family_confirmed: { label: '家属已确认', badge: 'bg-green-100 text-green-700', dot: 'bg-green-400' },
-  family_rejected: { label: '家属已拒绝', badge: 'bg-rose-100 text-rose-700', dot: 'bg-rose-400' },
   completed: { label: '已完成', badge: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-400' },
+  rejected: { label: '审核未通过', badge: 'bg-red-100 text-red-700', dot: 'bg-red-400' },
+  family_rejected: { label: '家属已拒绝', badge: 'bg-rose-100 text-rose-700', dot: 'bg-rose-400' },
   cancelled: { label: '已取消', badge: 'bg-warm-200 text-warm-500', dot: 'bg-warm-400' },
+}
+
+const STEP_LABELS = ['提交申请', '审核通过', '家属确认', '服务完成'] as const
+
+const stepStatusMap: Record<AppointmentStatus, number> = {
+  pending: 0,
+  family_pending: 1,
+  family_confirmed: 2,
+  completed: 3,
+  rejected: 0,
+  family_rejected: 1,
+  cancelled: 1,
+}
+
+function StepIndicator({ status }: { status: AppointmentStatus }) {
+  const reachedStep = stepStatusMap[status]
+  const isOffPath = ['rejected', 'family_rejected', 'cancelled'].includes(status)
+
+  if (isOffPath) {
+    return (
+      <div className="flex items-center gap-2 text-xs">
+        <div className="flex items-center gap-1">
+          {status === 'rejected' && (
+            <>
+              <span className="inline-block w-5 h-5 rounded-full bg-red-100 flex items-center justify-center"><XCircle size={12} className="text-red-500" /></span>
+              <span className="text-red-600 font-medium">审核未通过，流程终止</span>
+            </>
+          )}
+          {status === 'family_rejected' && (
+            <>
+              <span className="inline-block w-5 h-5 rounded-full bg-rose-100 flex items-center justify-center"><XCircle size={12} className="text-rose-500" /></span>
+              <span className="text-rose-600 font-medium">家属拒绝，流程终止</span>
+            </>
+          )}
+          {status === 'cancelled' && (
+            <>
+              <span className="inline-block w-5 h-5 rounded-full bg-warm-200 flex items-center justify-center"><XCircle size={12} className="text-warm-500" /></span>
+              <span className="text-warm-500 font-medium">预约已取消</span>
+            </>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  const stepIcons = [ClipboardCheck, CheckCircle2, Users, CalendarCheck]
+
+  return (
+    <div className="flex items-center gap-0">
+      {STEP_LABELS.map((label, i) => {
+        const Icon = stepIcons[i]
+        const isCompleted = i < reachedStep
+        const isCurrent = i === reachedStep
+        const isFuture = i > reachedStep
+
+        return (
+          <div key={label} className="flex items-center">
+            <div className="flex flex-col items-center gap-1">
+              <div
+                className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
+                  isCompleted
+                    ? 'bg-emerald-500 text-white'
+                    : isCurrent
+                    ? 'bg-care-500 text-white ring-2 ring-care-200'
+                    : 'bg-warm-100 text-warm-300'
+                }`}
+              >
+                <Icon size={14} />
+              </div>
+              <span
+                className={`text-[10px] leading-tight whitespace-nowrap ${
+                  isCompleted
+                    ? 'text-emerald-600 font-medium'
+                    : isCurrent
+                    ? 'text-care-600 font-medium'
+                    : 'text-warm-300'
+                }`}
+              >
+                {label}
+              </span>
+            </div>
+            {i < STEP_LABELS.length - 1 && (
+              <div
+                className={`w-8 h-0.5 mx-1 mb-4 transition-colors ${
+                  isCompleted ? 'bg-emerald-400' : 'bg-warm-200'
+                }`}
+              />
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 type FilterKey = 'all' | 'active' | 'family' | 'finished'
@@ -100,7 +194,7 @@ export default function CommunityService() {
     })
     switch (activeFilter) {
       case 'active':
-        return sorted.filter((a) => ['pending', 'approved', 'family_pending', 'family_confirmed'].includes(a.status))
+        return sorted.filter((a) => ['pending', 'family_pending', 'family_confirmed'].includes(a.status))
       case 'family':
         return sorted.filter((a) => a.status === 'family_pending')
       case 'finished':
@@ -112,7 +206,7 @@ export default function CommunityService() {
 
   const stats = useMemo(() => {
     const active = appointments.filter((a) =>
-      ['pending', 'approved', 'family_pending', 'family_confirmed'].includes(a.status)
+      ['pending', 'family_pending', 'family_confirmed'].includes(a.status)
     ).length
     const familyPending = appointments.filter((a) => a.status === 'family_pending').length
     const completed = appointments.filter((a) => a.status === 'completed').length
@@ -178,17 +272,17 @@ export default function CommunityService() {
     switch (appointment.status) {
       case 'pending':
         actions.push(
-          { label: '通过', onClick: () => approveAppointment(appointment.id), variant: 'success' },
-          { label: '拒绝', onClick: () => openRejectModal(appointment.id, 'reject'), variant: 'danger' }
+          { label: '审核通过', onClick: () => approveAppointment(appointment.id), variant: 'success' },
+          { label: '审核拒绝', onClick: () => openRejectModal(appointment.id, 'reject'), variant: 'danger' }
         )
         break
       case 'family_pending':
         actions.push(
           { label: '家属确认', onClick: () => setConfirmModalId(appointment.id), variant: 'success' },
-          { label: '家属拒绝', onClick: () => openRejectModal(appointment.id, 'family_reject'), variant: 'danger' }
+          { label: '家属拒绝', onClick: () => openRejectModal(appointment.id, 'family_reject'), variant: 'danger' },
+          { label: '取消预约', onClick: () => cancelAppointment(appointment.id), variant: 'warning' }
         )
         break
-      case 'approved':
       case 'family_confirmed':
         actions.push(
           { label: '完成服务', onClick: () => completeAppointment(appointment.id), variant: 'success' },
@@ -318,6 +412,10 @@ export default function CommunityService() {
 
                   {isExpanded && (
                     <div className="border-t border-warm-100 px-4 pb-4 pt-3 animate-fade-in">
+                      <div className="mb-3 px-1">
+                        <StepIndicator status={apt.status} />
+                      </div>
+
                       <div className="space-y-2.5 text-sm">
                         <div className="flex gap-2">
                           <span className="text-warm-400 w-20 shrink-0">服务描述</span>
@@ -546,7 +644,7 @@ export default function CommunityService() {
             <div className="flex items-center justify-between px-6 py-4 border-b border-warm-100">
               <h2 className="text-base font-semibold text-warm-900 flex items-center gap-2">
                 <XCircle size={18} className="text-red-500" />
-                {rejectMode === 'reject' ? '拒绝预约' : '家属拒绝'}
+                {rejectMode === 'reject' ? '审核拒绝' : '家属拒绝'}
               </h2>
               <button onClick={() => setRejectModalId(null)} className="text-warm-400 hover:text-warm-600 transition-colors">
                 <X size={18} />

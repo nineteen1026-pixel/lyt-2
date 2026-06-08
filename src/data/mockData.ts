@@ -95,8 +95,17 @@ function generateMedications(): Medication[] {
         else if (rand < 0.92) status = 'missed'
         else status = 'taken'
       } else {
-        if (rx.time < '12:00' && Math.random() < 0.7) status = 'taken'
-        else status = 'pending'
+        const [h, min] = rx.time.split(':').map(Number)
+        const scheduledMinutes = h * 60 + min
+        const nowMinutes = now.getHours() * 60 + now.getMinutes()
+
+        if (nowMinutes >= scheduledMinutes + 30) {
+          status = Math.random() < 0.85 ? 'taken' : 'missed'
+        } else if (nowMinutes >= scheduledMinutes) {
+          status = Math.random() < 0.6 ? 'taken' : 'pending'
+        } else {
+          status = 'pending'
+        }
       }
 
       records.push({

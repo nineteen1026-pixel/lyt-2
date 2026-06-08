@@ -137,7 +137,8 @@ function computeMedicationSummary(medications: ReturnType<typeof useCareStore.ge
   const pending = filtered.filter((m) => m.status === 'pending').length
   const missed = filtered.filter((m) => m.status === 'missed').length
   const total = filtered.length
-  const rate = total > 0 ? Math.round((taken / total) * 100) : 0
+  const completed = taken + missed
+  const rate = completed > 0 ? Math.round((taken / completed) * 100) : 0
   return { taken, pending, missed, total, rate }
 }
 

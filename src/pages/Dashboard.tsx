@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom'
-import { HeartPulse, Pill, AlertTriangle, Users, Activity, Thermometer, Droplets, ChevronRight } from 'lucide-react'
+import { HeartPulse, Pill, AlertTriangle, Users, Activity, Thermometer, Droplets, ChevronRight, XCircle } from 'lucide-react'
 import { elderly, healthRecords } from '@/data/mockData'
 import { useCareStore } from '@/store/useCareStore'
-import type { ElderlyStatus, AlertLevel } from '@/types'
+import type { ElderlyStatus, AlertLevel, MedicationStatus } from '@/types'
 
 const statusConfig: Record<ElderlyStatus, { label: string; color: string; bg: string; ring: string }> = {
   normal: { label: '状态良好', color: 'text-health-600', bg: 'bg-health-100', ring: 'ring-health-400' },
@@ -37,11 +37,11 @@ export default function Dashboard() {
 
   const todayStr = new Date().toISOString().split('T')[0]
   const todayMedications = medications.filter((m) => m.date === todayStr)
-  const pendingMedications = todayMedications.filter((m) => m.status === 'pending')
+  const activeMedications = todayMedications.filter((m) => m.status === 'pending' || m.status === 'missed')
   const unresolvedAlerts = alerts.filter((a) => !a.resolved)
   const todayTasks = [
-    ...pendingMedications.map((m) => ({ type: 'med' as const, id: m.id, title: `${m.name} ${m.dosage}`, time: m.scheduledTime, data: m })),
-    ...unresolvedAlerts.map((a) => ({ type: 'alert' as const, id: a.id, title: a.title, time: a.time.slice(11, 16), data: a })),
+    ...activeMedications.map((m) => ({ type: 'med' as const, id: m.id, title: `${m.name} ${m.dosage}`, time: m.scheduledTime, medStatus: m.status, data: m })),
+    ...unresolvedAlerts.map((a) => ({ type: 'alert' as const, id: a.id, title: a.title, time: a.time.slice(11, 16), medStatus: undefined as MedicationStatus | undefined, data: a })),
   ].sort((a, b) => a.time.localeCompare(b.time))
 
   const bp = getLatestRecord('bloodPressure')
@@ -119,18 +119,21 @@ export default function Dashboard() {
             <div className="space-y-2.5">
               {todayTasks.map((task) => {
                 if (task.type === 'med') {
+                  const isMissed = task.medStatus === 'missed'
                   return (
                     <button
                       key={task.id}
                       onClick={() => toggleMedication(task.id)}
-                      className="w-full bg-white rounded-xl p-3.5 shadow-sm border border-warm-200/60 border-l-4 border-l-care-400 flex items-center gap-3 transition-all hover:shadow-md active:scale-[0.98] text-left"
+                      className={`w-full bg-white rounded-xl p-3.5 shadow-sm border border-warm-200/60 border-l-4 flex items-center gap-3 transition-all hover:shadow-md active:scale-[0.98] text-left ${isMissed ? 'border-l-danger-500' : 'border-l-care-400'}`}
                     >
-                      <div className="w-9 h-9 rounded-lg bg-care-50 flex items-center justify-center flex-shrink-0">
-                        <Pill className="w-4.5 h-4.5 text-care-500" />
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${isMissed ? 'bg-danger-50' : 'bg-care-50'}`}>
+                        {isMissed ? <XCircle className="w-4.5 h-4.5 text-danger-500" /> : <Pill className="w-4.5 h-4.5 text-care-500" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-warm-800 truncate">{task.title}</p>
-                        <p className="text-xs text-warm-400 mt-0.5">{task.time} · 点击确认服药</p>
+                        <p className={`text-xs mt-0.5 ${isMissed ? 'text-danger-500 font-medium' : 'text-warm-400'}`}>
+                          {task.time} · {isMissed ? '漏服，点击补记' : '点击确认服药'}
+                        </p>
                       </div>
                       <ChevronRight className="w-4 h-4 text-warm-300 flex-shrink-0" />
                     </button>

@@ -19,7 +19,7 @@ import { healthRecords } from '@/data/mockData'
 import { assessRisk, getRiskLevelConfig } from '@/lib/riskEngine'
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: '首页概览' },
+  { to: '/', icon: LayoutDashboard, label: '今日照护中枢' },
   { to: '/risk-stratification', icon: ShieldAlert, label: '风险分层' },
   { to: '/health', icon: HeartPulse, label: '健康记录' },
   { to: '/follow-up', icon: Stethoscope, label: '家庭医生' },

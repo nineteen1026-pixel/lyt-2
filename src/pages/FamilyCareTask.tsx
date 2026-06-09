@@ -181,7 +181,7 @@ export default function FamilyCareTask() {
     const inProgress = careTasks.filter((t) => t.status === 'in_progress').length
     const completed = careTasks.filter((t) => t.status === 'completed').length
     const overdue = careTasks.filter((t) => t.status === 'overdue').length
-    const todayCheckIns = checkInRecords.filter((r) => r.checkInAt.startsWith('2026-06-08')).length
+    const todayCheckIns = checkInRecords.filter((r) => r.checkInAt.startsWith(new Date().toISOString().split('T')[0])).length
     const totalCheckIns = checkInRecords.length
     return { pending, inProgress, completed, overdue, todayCheckIns, totalCheckIns }
   }, [careTasks, checkInRecords])

@@ -1,10 +1,10 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { HeartPulse, Pill, AlertTriangle, Users, Activity, Thermometer, Droplets, ChevronRight, XCircle, ShieldCheck, ArrowRight } from 'lucide-react'
-import { elderly, healthRecords } from '@/data/mockData'
+import { HeartPulse, Pill, AlertTriangle, Users, Activity, Thermometer, Droplets, ChevronRight, XCircle, ShieldCheck, ArrowRight, ClipboardList, CheckCircle2, Clock, AlertCircle } from 'lucide-react'
+import { elderly, healthRecords, contacts } from '@/data/mockData'
 import { useCareStore } from '@/store/useCareStore'
 import { assessRisk, getRiskLevelConfig } from '@/lib/riskEngine'
-import type { ElderlyStatus, AlertLevel, MedicationStatus } from '@/types'
+import type { ElderlyStatus, AlertLevel, MedicationStatus, CareTask, CareTaskCategory } from '@/types'
 
 const statusConfig: Record<ElderlyStatus, { label: string; color: string; bg: string; ring: string }> = {
   normal: { label: '状态良好', color: 'text-health-600', bg: 'bg-health-100', ring: 'ring-health-400' },
@@ -28,8 +28,31 @@ function formatDate() {
   return `${y}年${m}月${d}日 星期${w}`
 }
 
+const careCategoryIcon: Record<CareTaskCategory, typeof Activity> = {
+  daily_care: HeartPulse,
+  medical: Pill,
+  housework: ClipboardList,
+  accompany: Users,
+  emotional: HeartPulse,
+  finance: ClipboardList,
+}
+
+const careCategoryColor: Record<CareTaskCategory, { color: string; bg: string }> = {
+  daily_care: { color: 'text-care-500', bg: 'bg-care-50' },
+  medical: { color: 'text-health-500', bg: 'bg-health-50' },
+  housework: { color: 'text-purple-500', bg: 'bg-purple-50' },
+  accompany: { color: 'text-blue-500', bg: 'bg-blue-50' },
+  emotional: { color: 'text-pink-500', bg: 'bg-pink-50' },
+  finance: { color: 'text-amber-500', bg: 'bg-amber-50' },
+}
+
+function getContactName(contactId: string) {
+  const c = contacts.find((x) => x.id === contactId)
+  return c ? c.name : ''
+}
+
 export default function Dashboard() {
-  const { medications, alerts, toggleMedication, resolveAlert } = useCareStore()
+  const { medications, alerts, careTasks, checkInRecords, taskReminders, toggleMedication, resolveAlert, completeCareTask } = useCareStore()
 
   const riskAssessment = useMemo(
     () => assessRisk('1', healthRecords, alerts, medications),
@@ -41,9 +64,37 @@ export default function Dashboard() {
   const todayMedications = medications.filter((m) => m.date === todayStr)
   const activeMedications = todayMedications.filter((m) => m.status === 'pending' || m.status === 'missed')
   const unresolvedAlerts = alerts.filter((a) => !a.resolved)
+
+  const todayCareTasks = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0]
+    return careTasks.filter(
+      (t) => (t.scheduledDate === today && (t.status === 'pending' || t.status === 'in_progress')) || t.status === 'overdue'
+    )
+  }, [careTasks])
+
+  const overdueCareTasks = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0]
+    return careTasks.filter((t) => t.status === 'overdue' || (t.scheduledDate < today && (t.status === 'pending' || t.status === 'in_progress')))
+  }, [careTasks])
+
+  const todayCheckIns = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0]
+    return checkInRecords.filter((r) => r.checkInAt.startsWith(today))
+  }, [checkInRecords])
+
+  const todayCompletedTasks = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0]
+    return careTasks.filter((t) => t.status === 'completed' && t.scheduledDate === today)
+  }, [careTasks])
+
+  const activeReminders = useMemo(() => {
+    return taskReminders.filter((r) => r.status === 'active')
+  }, [taskReminders])
+
   const todayTasks = [
     ...activeMedications.map((m) => ({ type: 'med' as const, id: m.id, title: `${m.name} ${m.dosage}`, time: m.scheduledTime, medStatus: m.status, data: m })),
     ...unresolvedAlerts.map((a) => ({ type: 'alert' as const, id: a.id, title: a.title, time: a.time.slice(11, 16), medStatus: undefined as MedicationStatus | undefined, data: a })),
+    ...todayCareTasks.map((t) => ({ type: 'care' as const, id: t.id, title: t.title, time: t.scheduledTime, medStatus: undefined as MedicationStatus | undefined, data: t })),
   ].sort((a, b) => a.time.localeCompare(b.time))
 
   const bp = getLatestRecord('bloodPressure')
@@ -171,6 +222,31 @@ export default function Dashboard() {
                     </button>
                   )
                 }
+                if (task.type === 'care') {
+                  const careTask = task.data as CareTask
+                  const isOverdue = careTask.status === 'overdue'
+                  const catIcon = careCategoryIcon[careTask.category]
+                  const catColor = careCategoryColor[careTask.category]
+                  const CatIcon = catIcon
+                  return (
+                    <Link
+                      key={task.id}
+                      to="/family-care-task"
+                      className={`bg-white rounded-xl p-3.5 shadow-sm border border-warm-200/60 border-l-4 flex items-center gap-3 transition-all hover:shadow-md active:scale-[0.98] ${isOverdue ? 'border-l-danger-500' : 'border-l-purple-400'}`}
+                    >
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${isOverdue ? 'bg-danger-50' : catColor.bg}`}>
+                        {isOverdue ? <AlertCircle className="w-4.5 h-4.5 text-danger-500" /> : <CatIcon className={`w-4.5 h-4.5 ${catColor.color}`} />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-warm-800 truncate">{task.title}</p>
+                        <p className={`text-xs mt-0.5 ${isOverdue ? 'text-danger-500 font-medium' : 'text-warm-400'}`}>
+                          {task.time} · {getContactName(careTask.assignedContactId)} · {isOverdue ? '已逾期，点击处理' : '照护任务'}
+                        </p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-warm-300 flex-shrink-0" />
+                    </Link>
+                  )
+                }
                 const alertLevel = (task.data as { level: AlertLevel }).level
                 return (
                   <Link
@@ -194,6 +270,79 @@ export default function Dashboard() {
             </div>
           )}
         </section>
+
+        <section className="animate-slide-up" style={{ animationDelay: '0.12s' }}>
+          <h3 className="text-base font-semibold text-warm-700 mb-3">今日打卡</h3>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-white rounded-xl p-3.5 shadow-sm border border-warm-200/60 text-center">
+              <p className="text-2xl font-bold text-care-500">{todayCareTasks.length}</p>
+              <p className="text-xs text-warm-400 mt-1">待完成任务</p>
+            </div>
+            <div className="bg-white rounded-xl p-3.5 shadow-sm border border-emerald-200/60 text-center">
+              <p className="text-2xl font-bold text-emerald-500">{todayCompletedTasks.length}</p>
+              <p className="text-xs text-warm-400 mt-1">已完成</p>
+            </div>
+            <div className="bg-white rounded-xl p-3.5 shadow-sm border border-blue-200/60 text-center">
+              <p className="text-2xl font-bold text-blue-500">{todayCheckIns.length}</p>
+              <p className="text-xs text-warm-400 mt-1">打卡记录</p>
+            </div>
+          </div>
+        </section>
+
+        {overdueCareTasks.length > 0 && (
+          <section className="animate-slide-up" style={{ animationDelay: '0.14s' }}>
+            <h3 className="text-base font-semibold text-danger-600 mb-3 flex items-center gap-1.5">
+              <AlertCircle size={16} />
+              逾期提醒
+            </h3>
+            <div className="space-y-2.5">
+              {overdueCareTasks.map((task) => {
+                const catColor = careCategoryColor[task.category]
+                return (
+                  <Link
+                    key={task.id}
+                    to="/family-care-task"
+                    className="bg-danger-50 rounded-xl p-3.5 shadow-sm border border-danger-200 border-l-4 border-l-danger-500 flex items-center gap-3 transition-all hover:shadow-md active:scale-[0.98]"
+                  >
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-danger-100">
+                      <AlertCircle className="w-4.5 h-4.5 text-danger-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-warm-800 truncate">{task.title}</p>
+                      <p className="text-xs text-danger-500 mt-0.5">
+                        原定 {task.scheduledDate} {task.scheduledTime} · {getContactName(task.assignedContactId)} · 点击处理
+                      </p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-danger-300 flex-shrink-0" />
+                  </Link>
+                )
+              })}
+            </div>
+            {activeReminders.length > 0 && (
+              <div className="mt-3 bg-white rounded-xl p-3.5 shadow-sm border border-warm-200/60">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock size={14} className="text-amber-500" />
+                  <span className="text-xs font-medium text-warm-600">活跃提醒</span>
+                  <span className="inline-flex items-center justify-center bg-amber-500 text-white text-xs rounded-full w-4 h-4">
+                    {activeReminders.length}
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {activeReminders.slice(0, 3).map((r) => (
+                    <p key={r.id} className="text-xs text-warm-500 truncate">
+                      · {r.message}
+                    </p>
+                  ))}
+                  {activeReminders.length > 3 && (
+                    <Link to="/family-care-task" className="text-xs text-care-500 font-medium">
+                      查看全部 {activeReminders.length} 条提醒 →
+                    </Link>
+                  )}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
 
         <section className="animate-slide-up" style={{ animationDelay: '0.15s' }}>
           <h3 className="text-base font-semibold text-warm-700 mb-3">快捷入口</h3>

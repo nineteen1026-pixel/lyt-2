@@ -413,6 +413,16 @@ export const appointments: Appointment[] = [
   },
 ]
 
+function offsetDate(days: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() + days)
+  return d.toISOString().split('T')[0]
+}
+
+function offsetDateTime(days: number, time: string): string {
+  return `${offsetDate(days)} ${time}`
+}
+
 export const careTasks: CareTask[] = [
   {
     id: 'ct1',
@@ -423,11 +433,11 @@ export const careTasks: CareTask[] = [
     priority: 'high',
     status: 'pending',
     assignedContactId: 'c1',
-    scheduledDate: '2026-06-08',
+    scheduledDate: offsetDate(0),
     scheduledTime: '07:00',
     durationMinutes: 30,
     recurringRule: 'daily',
-    createdAt: '2026-06-01 09:00',
+    createdAt: offsetDateTime(-7, '09:00'),
   },
   {
     id: 'ct2',
@@ -438,12 +448,12 @@ export const careTasks: CareTask[] = [
     priority: 'high',
     status: 'completed',
     assignedContactId: 'c4',
-    scheduledDate: '2026-06-08',
+    scheduledDate: offsetDate(0),
     scheduledTime: '11:00',
     durationMinutes: 60,
     recurringRule: 'daily',
-    completedAt: '2026-06-08 11:50',
-    createdAt: '2026-06-01 09:00',
+    completedAt: offsetDateTime(0, '11:50'),
+    createdAt: offsetDateTime(-7, '09:00'),
   },
   {
     id: 'ct3',
@@ -454,10 +464,10 @@ export const careTasks: CareTask[] = [
     priority: 'high',
     status: 'pending',
     assignedContactId: 'c2',
-    scheduledDate: '2026-06-12',
+    scheduledDate: offsetDate(3),
     scheduledTime: '08:30',
     durationMinutes: 180,
-    createdAt: '2026-06-05 14:00',
+    createdAt: offsetDateTime(-3, '14:00'),
   },
   {
     id: 'ct4',
@@ -468,11 +478,11 @@ export const careTasks: CareTask[] = [
     priority: 'medium',
     status: 'in_progress',
     assignedContactId: 'c3',
-    scheduledDate: '2026-06-09',
+    scheduledDate: offsetDate(0),
     scheduledTime: '14:00',
     durationMinutes: 120,
     recurringRule: 'weekly',
-    createdAt: '2026-06-01 09:00',
+    createdAt: offsetDateTime(-7, '09:00'),
   },
   {
     id: 'ct5',
@@ -483,11 +493,11 @@ export const careTasks: CareTask[] = [
     priority: 'medium',
     status: 'pending',
     assignedContactId: 'c5',
-    scheduledDate: '2026-06-08',
+    scheduledDate: offsetDate(0),
     scheduledTime: '16:00',
     durationMinutes: 45,
     recurringRule: 'daily',
-    createdAt: '2026-06-01 09:00',
+    createdAt: offsetDateTime(-7, '09:00'),
   },
   {
     id: 'ct6',
@@ -498,11 +508,11 @@ export const careTasks: CareTask[] = [
     priority: 'medium',
     status: 'pending',
     assignedContactId: 'c2',
-    scheduledDate: '2026-06-08',
+    scheduledDate: offsetDate(0),
     scheduledTime: '19:00',
     durationMinutes: 30,
     recurringRule: 'daily',
-    createdAt: '2026-06-01 09:00',
+    createdAt: offsetDateTime(-7, '09:00'),
   },
   {
     id: 'ct7',
@@ -513,11 +523,11 @@ export const careTasks: CareTask[] = [
     priority: 'low',
     status: 'completed',
     assignedContactId: 'c3',
-    scheduledDate: '2026-06-05',
+    scheduledDate: offsetDate(-4),
     scheduledTime: '10:00',
     durationMinutes: 30,
-    completedAt: '2026-06-05 10:20',
-    createdAt: '2026-06-01 09:00',
+    completedAt: offsetDateTime(-4, '10:20'),
+    createdAt: offsetDateTime(-7, '09:00'),
   },
   {
     id: 'ct8',
@@ -528,11 +538,11 @@ export const careTasks: CareTask[] = [
     priority: 'high',
     status: 'pending',
     assignedContactId: 'c1',
-    scheduledDate: '2026-06-08',
+    scheduledDate: offsetDate(0),
     scheduledTime: '21:00',
     durationMinutes: 15,
     recurringRule: 'daily',
-    createdAt: '2026-06-01 09:00',
+    createdAt: offsetDateTime(-7, '09:00'),
   },
   {
     id: 'ct9',
@@ -543,11 +553,11 @@ export const careTasks: CareTask[] = [
     priority: 'high',
     status: 'pending',
     assignedContactId: 'c4',
-    scheduledDate: '2026-06-08',
+    scheduledDate: offsetDate(0),
     scheduledTime: '20:00',
     durationMinutes: 40,
     recurringRule: 'daily',
-    createdAt: '2026-06-01 09:00',
+    createdAt: offsetDateTime(-7, '09:00'),
   },
   {
     id: 'ct10',
@@ -558,10 +568,10 @@ export const careTasks: CareTask[] = [
     priority: 'low',
     status: 'overdue',
     assignedContactId: 'c5',
-    scheduledDate: '2026-06-07',
+    scheduledDate: offsetDate(-1),
     scheduledTime: '09:00',
     durationMinutes: 60,
-    createdAt: '2026-06-04 10:00',
+    createdAt: offsetDateTime(-4, '10:00'),
   },
 ]
 
@@ -671,7 +681,7 @@ export const checkInRecords: CheckInRecord[] = [
     contactId: 'c4',
     contactName: '王芳',
     note: '已为老人准备午餐，低盐低糖，老人食欲良好',
-    checkInAt: '2026-06-08 11:50',
+    checkInAt: offsetDateTime(0, '11:50'),
   },
   {
     id: 'ci2',
@@ -680,7 +690,7 @@ export const checkInRecords: CheckInRecord[] = [
     contactId: 'c3',
     contactName: '李明',
     note: '水电燃气费已通过手机银行代缴完成',
-    checkInAt: '2026-06-05 10:20',
+    checkInAt: offsetDateTime(-4, '10:20'),
   },
   {
     id: 'ci3',
@@ -689,7 +699,7 @@ export const checkInRecords: CheckInRecord[] = [
     contactId: 'c1',
     contactName: '张建国',
     note: '协助老人完成晨间洗漱，精神状态良好',
-    checkInAt: '2026-06-07 07:15',
+    checkInAt: offsetDateTime(-1, '07:15'),
   },
   {
     id: 'ci4',
@@ -698,7 +708,7 @@ export const checkInRecords: CheckInRecord[] = [
     contactId: 'c5',
     contactName: '张小明',
     note: '天气晴好，陪同老人在公园散步30分钟',
-    checkInAt: '2026-06-07 16:30',
+    checkInAt: offsetDateTime(-1, '16:30'),
   },
   {
     id: 'ci5',
@@ -707,7 +717,7 @@ export const checkInRecords: CheckInRecord[] = [
     contactId: 'c2',
     contactName: '张美华',
     note: '与老人聊天，老人情绪稳定，提到想见老朋友',
-    checkInAt: '2026-06-07 19:25',
+    checkInAt: offsetDateTime(-1, '19:25'),
   },
 ]
 
@@ -718,9 +728,9 @@ export const taskReminders: TaskReminder[] = [
     elderlyId: '1',
     contactId: 'c5',
     contactName: '张小明',
-    message: '「采购生活用品」任务已于2026-06-07 09:00到期，至今未完成，请尽快处理。',
+    message: `「采购生活用品」任务已于昨日到期，至今未完成，请尽快处理。`,
     status: 'active',
-    createdAt: '2026-06-07 09:30',
+    createdAt: offsetDateTime(-1, '09:30'),
   },
   {
     id: 'r2',
@@ -730,7 +740,7 @@ export const taskReminders: TaskReminder[] = [
     contactName: '张建国',
     message: '「协助洗漱更衣」任务将于今日07:00执行，请提前准备。',
     status: 'active',
-    createdAt: '2026-06-08 06:30',
+    createdAt: offsetDateTime(0, '06:30'),
   },
   {
     id: 'r3',
@@ -740,7 +750,7 @@ export const taskReminders: TaskReminder[] = [
     contactName: '张建国',
     message: '「晚间用药监督」任务将于今晚21:00执行，请确保按时提醒老人服药。',
     status: 'active',
-    createdAt: '2026-06-08 20:00',
+    createdAt: offsetDateTime(0, '20:00'),
   },
   {
     id: 'r4',
@@ -748,9 +758,9 @@ export const taskReminders: TaskReminder[] = [
     elderlyId: '1',
     contactId: 'c2',
     contactName: '张美华',
-    message: '「陪护就医复查」任务将于2026-06-12 08:30执行，请提前确认出行安排。',
+    message: `「陪护就医复查」任务将于${offsetDate(3)} 08:30执行，请提前确认出行安排。`,
     status: 'active',
-    createdAt: '2026-06-08 08:00',
+    createdAt: offsetDateTime(0, '08:00'),
   },
   {
     id: 'r5',
@@ -760,7 +770,7 @@ export const taskReminders: TaskReminder[] = [
     contactName: '王芳',
     message: '「协助沐浴」任务将于今晚20:00执行，注意防滑安全措施。',
     status: 'active',
-    createdAt: '2026-06-08 19:00',
+    createdAt: offsetDateTime(0, '19:00'),
   },
   {
     id: 'r6',
@@ -770,7 +780,7 @@ export const taskReminders: TaskReminder[] = [
     contactName: '张小明',
     message: '「采购生活用品」逾期已超过24小时，已升级提醒至紧急联系人。',
     status: 'escalated',
-    createdAt: '2026-06-08 09:30',
+    createdAt: offsetDateTime(0, '09:30'),
   },
 ]
 

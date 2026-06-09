@@ -29,7 +29,7 @@ function assessBloodPressure(records: HealthRecord[]): RiskFactor {
 
     if (i > 0) {
       const prev = recent[i - 1]
-      trendDirection += ((r.systolic ?? 0) - (prev.systolic ?? 0))
+      trendDirection += ((prev.systolic ?? 0) - (r.systolic ?? 0))
     }
   }
 
@@ -107,7 +107,7 @@ function assessBloodSugar(records: HealthRecord[]): RiskFactor {
 
   let trendDirection = 0
   for (let i = 1; i < recent.length; i++) {
-    trendDirection += recent[i].value - recent[i - 1].value
+    trendDirection += recent[i - 1].value - recent[i].value
   }
 
   for (const r of recent) {

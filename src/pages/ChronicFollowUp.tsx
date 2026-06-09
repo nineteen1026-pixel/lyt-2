@@ -105,11 +105,13 @@ const statusLabelMap: Record<string, { label: string; cls: string }> = {
   low: { label: '偏低', cls: 'bg-blue-100 text-blue-500' },
 }
 
-function getTrend(records: { value: number; date: string }[], count = 7): 'up' | 'down' | 'stable' {
-  const recent = records.slice(0, count)
+function getTrend(records: { value: number; date: string }[]): 'up' | 'down' | 'stable' {
+  const sorted = [...records].sort((a, b) => a.date.localeCompare(b.date))
+  const recent = sorted.slice(-14)
   if (recent.length < 3) return 'stable'
-  const firstHalf = recent.slice(0, Math.floor(recent.length / 2))
-  const secondHalf = recent.slice(Math.floor(recent.length / 2))
+  const half = Math.floor(recent.length / 2)
+  const firstHalf = recent.slice(0, half)
+  const secondHalf = recent.slice(half)
   const avgFirst = firstHalf.reduce((s, r) => s + r.value, 0) / firstHalf.length
   const avgSecond = secondHalf.reduce((s, r) => s + r.value, 0) / secondHalf.length
   const diff = avgSecond - avgFirst
@@ -177,8 +179,7 @@ export default function ChronicFollowUp() {
     for (const metric of chronicMetrics) {
       const records = healthRecords
         .filter(r => r.type === metric.type)
-        .sort((a, b) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`))
-        .slice(0, 14)
+        .map(r => ({ value: metric.type === 'bloodPressure' ? (r.systolic ?? r.value) : r.value, date: r.date }))
       result[metric.type] = getTrend(records)
     }
     return result
@@ -212,13 +213,16 @@ export default function ChronicFollowUp() {
   }, [followUpAppointments])
 
   const nextFollowUpDate = useMemo(() => {
-    const dates = chronicRecords
+    const today = new Date().toISOString().split('T')[0]
+    const appointmentDates = upcomingAppointments.map(a => a.scheduledDate)
+    const recordDates = chronicRecords
       .map(r => r.nextFollowUpDate)
-      .filter((d): d is string => !!d)
+      .filter((d): d is string => !!d && d >= today)
+    const allDates = [...appointmentDates, ...recordDates]
+      .filter(d => d >= today)
       .sort()
-      .reverse()
-    return dates[0] || null
-  }, [chronicRecords])
+    return allDates[0] || null
+  }, [chronicRecords, upcomingAppointments])
 
   const flowStatus = useMemo(() => {
     const hasActiveSuggestions = doctorSuggestions.some(s => s.isActive)
@@ -408,27 +412,37 @@ export default function ChronicFollowUp() {
               <ArrowRight size={16} className="text-warm-300" />
             </Link>
 
-            {nextFollowUpDate && (
-              <div className="rounded-xl bg-care-50 border border-care-200 p-4 animate-slide-up" style={{ animationDelay: '260ms' }}>
-                <div className="flex items-center gap-2 mb-2">
-                  <CalendarClock size={16} className="text-care-600" />
-                  <span className="text-sm font-semibold text-care-700">下次复诊提醒</span>
+            {nextFollowUpDate && (() => {
+              const today = new Date()
+              const target = new Date(nextFollowUpDate)
+              const daysLeft = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+              const hasScheduledAppointment = upcomingAppointments.some(a => a.scheduledDate === nextFollowUpDate)
+              const isUrgent = daysLeft >= 0 && daysLeft <= 3
+              return (
+                <div className={`rounded-xl border p-4 animate-slide-up ${isUrgent ? 'bg-red-50 border-red-200' : 'bg-care-50 border-care-200'}`} style={{ animationDelay: '260ms' }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <CalendarClock size={16} className={isUrgent ? 'text-red-600' : 'text-care-600'} />
+                    <span className={`text-sm font-semibold ${isUrgent ? 'text-red-700' : 'text-care-700'}`}>下次复诊提醒</span>
+                    {isUrgent && (
+                      <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-600">即将就诊</span>
+                    )}
+                  </div>
+                  <p className={`text-lg font-bold ${isUrgent ? 'text-red-800' : 'text-care-800'}`}>{nextFollowUpDate}</p>
+                  <p className={`text-xs mt-1 ${isUrgent ? 'text-red-600' : 'text-care-600'}`}>
+                    {daysLeft >= 0
+                      ? `距就诊还有${daysLeft}天${hasScheduledAppointment ? '，已预约请按时前往' : '，请尽快确认预约'}`
+                      : '复诊日期已过，请尽快联系医生'}
+                  </p>
+                  <button
+                    onClick={() => setActiveTab('upcoming')}
+                    className={`mt-2 inline-flex items-center gap-1 text-xs font-medium ${isUrgent ? 'text-red-600 hover:text-red-700' : 'text-care-600 hover:text-care-700'}`}
+                  >
+                    查看随访计划
+                    <ArrowRight size={12} />
+                  </button>
                 </div>
-                <p className="text-lg font-bold text-care-800">{nextFollowUpDate}</p>
-                <p className="text-xs text-care-600 mt-1">
-                  {upcomingAppointments.length > 0
-                    ? `已预约${upcomingAppointments.length}次待就诊，请按时前往`
-                    : '请及时预约复诊'}
-                </p>
-                <button
-                  onClick={() => setActiveTab('upcoming')}
-                  className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-care-600 hover:text-care-700"
-                >
-                  查看随访计划
-                  <ArrowRight size={12} />
-                </button>
-              </div>
-            )}
+              )
+            })()}
 
             {chronicRecords.length > 0 && (
               <div className="rounded-xl bg-white shadow-sm border border-warm-200 p-4 animate-slide-up" style={{ animationDelay: '320ms' }}>

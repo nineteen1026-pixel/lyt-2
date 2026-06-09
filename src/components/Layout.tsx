@@ -12,6 +12,7 @@ import {
   CalendarDays,
   Handshake,
   Stethoscope,
+  RotateCcw,
 } from 'lucide-react'
 import { useCareStore } from '@/store/useCareStore'
 import { healthRecords } from '@/data/mockData'
@@ -22,6 +23,7 @@ const navItems = [
   { to: '/risk-stratification', icon: ShieldAlert, label: '风险分层' },
   { to: '/health', icon: HeartPulse, label: '健康记录' },
   { to: '/follow-up', icon: Stethoscope, label: '家庭医生' },
+  { to: '/chronic-follow-up', icon: RotateCcw, label: '慢病复诊' },
   { to: '/medication', icon: Pill, label: '用药提醒' },
   { to: '/alerts', icon: AlertTriangle, label: '异常告警' },
   { to: '/schedule', icon: CalendarDays, label: '照护排班' },
@@ -46,6 +48,12 @@ export default function Layout() {
   )
   const upcomingFollowUp = useCareStore(
     (s) => s.followUpAppointments.filter((a) => ['scheduled', 'confirmed'].includes(a.status)).length
+  )
+  const upcomingChronic = useCareStore(
+    (s) => s.followUpAppointments.filter((a) =>
+      ['scheduled', 'confirmed'].includes(a.status) &&
+      (a.followUpType === 'chronic_disease' || a.followUpType === 'medication_review')
+    ).length
   )
   const riskLevel = useCareStore((s) => {
     const assessment = assessRisk('1', healthRecords, s.alerts, s.medications)
@@ -105,6 +113,11 @@ export default function Layout() {
               {item.to === '/follow-up' && upcomingFollowUp > 0 && (
                 <span className="ml-auto bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
                   {upcomingFollowUp}
+                </span>
+              )}
+              {item.to === '/chronic-follow-up' && upcomingChronic > 0 && (
+                <span className="ml-auto bg-care-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+                  {upcomingChronic}
                 </span>
               )}
             </NavLink>

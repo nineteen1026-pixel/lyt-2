@@ -178,9 +178,16 @@ export const useCareStore = create<CareStore>((set) => ({
       appointments: [appointment, ...state.appointments],
     })),
   addCareTask: (task: CareTask) =>
-    set((state) => ({
-      careTasks: [task, ...state.careTasks],
-    })),
+    set((state) => {
+      const now = new Date()
+      const today = now.toISOString().split('T')[0]
+      const isOverdue = task.status !== 'completed' && (task.scheduledDate < today || (task.scheduledDate === today && (() => {
+        const [h, m] = task.scheduledTime.split(':').map(Number)
+        return now.getHours() * 60 + now.getMinutes() > h * 60 + m + 30
+      })()))
+      const finalTask = isOverdue && task.status === 'pending' ? { ...task, status: 'overdue' as CareTaskStatus } : task
+      return { careTasks: [finalTask, ...state.careTasks] }
+    }),
   updateCareTask: (id: string, updates: Partial<CareTask>) =>
     set((state) => ({
       careTasks: state.careTasks.map((t) =>
@@ -281,29 +288,94 @@ export const useCareStore = create<CareStore>((set) => ({
       }
     }),
   dismissReminder: (id: string) =>
-    set((state) => ({
-      taskReminders: state.taskReminders.map((r) =>
-        r.id === id
-          ? {
-              ...r,
-              status: 'dismissed' as ReminderStatus,
-              dismissedAt: new Date().toLocaleString('zh-CN', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-              }).replace(/\//g, '-'),
-            }
-          : r
-      ),
-    })),
+    set((state) => {
+      const nowStr = new Date().toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).replace(/\//g, '-')
+
+      if (id.startsWith('derived-')) {
+        const existing = state.taskReminders.find((r) => r.id === id)
+        if (existing) {
+          return {
+            taskReminders: state.taskReminders.map((r) =>
+              r.id === id ? { ...r, status: 'dismissed' as ReminderStatus, dismissedAt: nowStr } : r
+            ),
+          }
+        }
+        const taskId = id.replace('derived-', '')
+        const task = state.careTasks.find((t) => t.id === taskId)
+        if (!task) return state
+        const contact = { id: task.assignedContactId, name: task.assignedContactId }
+        const newReminder: TaskReminder = {
+          id,
+          taskId,
+          elderlyId: task.elderlyId,
+          contactId: contact.id,
+          contactName: contact.name,
+          message: `「${task.title}」逾期提醒已忽略`,
+          status: 'dismissed' as ReminderStatus,
+          createdAt: nowStr,
+          dismissedAt: nowStr,
+        }
+        return { taskReminders: [newReminder, ...state.taskReminders] }
+      }
+
+      return {
+        taskReminders: state.taskReminders.map((r) =>
+          r.id === id
+            ? {
+                ...r,
+                status: 'dismissed' as ReminderStatus,
+                dismissedAt: nowStr,
+              }
+            : r
+        ),
+      }
+    }),
   escalateReminder: (id: string) =>
-    set((state) => ({
-      taskReminders: state.taskReminders.map((r) =>
-        r.id === id ? { ...r, status: 'escalated' as ReminderStatus } : r
-      ),
-    })),
+    set((state) => {
+      if (id.startsWith('derived-')) {
+        const existing = state.taskReminders.find((r) => r.id === id)
+        if (existing) {
+          return {
+            taskReminders: state.taskReminders.map((r) =>
+              r.id === id ? { ...r, status: 'escalated' as ReminderStatus } : r
+            ),
+          }
+        }
+        const taskId = id.replace('derived-', '')
+        const task = state.careTasks.find((t) => t.id === taskId)
+        if (!task) return state
+        const nowStr = new Date().toLocaleString('zh-CN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        }).replace(/\//g, '-')
+        const newReminder: TaskReminder = {
+          id,
+          taskId,
+          elderlyId: task.elderlyId,
+          contactId: task.assignedContactId,
+          contactName: task.assignedContactId,
+          message: `「${task.title}」逾期已升级提醒至紧急联系人`,
+          status: 'escalated' as ReminderStatus,
+          createdAt: nowStr,
+        }
+        return { taskReminders: [newReminder, ...state.taskReminders] }
+      }
+
+      return {
+        taskReminders: state.taskReminders.map((r) =>
+          r.id === id ? { ...r, status: 'escalated' as ReminderStatus } : r
+        ),
+      }
+    }),
   addReminder: (reminder: TaskReminder) =>
     set((state) => ({
       taskReminders: [reminder, ...state.taskReminders],

@@ -4,6 +4,7 @@ import { HeartPulse, Pill, AlertTriangle, Users, Activity, Thermometer, Droplets
 import { elderly, healthRecords, contacts } from '@/data/mockData'
 import { useCareStore } from '@/store/useCareStore'
 import { assessRisk, getRiskLevelConfig } from '@/lib/riskEngine'
+import { deriveReminders, deriveOverdueTasks, isTaskOverdue } from '@/lib/reminderEngine'
 import type { ElderlyStatus, AlertLevel, MedicationStatus, CareTask, CareTaskCategory } from '@/types'
 
 const statusConfig: Record<ElderlyStatus, { label: string; color: string; bg: string; ring: string }> = {
@@ -73,9 +74,16 @@ export default function Dashboard() {
   }, [careTasks])
 
   const overdueCareTasks = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0]
-    return careTasks.filter((t) => t.status === 'overdue' || (t.scheduledDate < today && (t.status === 'pending' || t.status === 'in_progress')))
+    return deriveOverdueTasks(careTasks)
   }, [careTasks])
+
+  const derivedReminders = useMemo(() => {
+    return deriveReminders(careTasks, taskReminders)
+  }, [careTasks, taskReminders])
+
+  const activeReminders = useMemo(() => {
+    return derivedReminders.filter((r) => r.status === 'active')
+  }, [derivedReminders])
 
   const todayCheckIns = useMemo(() => {
     const today = new Date().toISOString().split('T')[0]
@@ -86,10 +94,6 @@ export default function Dashboard() {
     const today = new Date().toISOString().split('T')[0]
     return careTasks.filter((t) => t.status === 'completed' && t.scheduledDate === today)
   }, [careTasks])
-
-  const activeReminders = useMemo(() => {
-    return taskReminders.filter((r) => r.status === 'active')
-  }, [taskReminders])
 
   const todayTasks = [
     ...activeMedications.map((m) => ({ type: 'med' as const, id: m.id, title: `${m.name} ${m.dosage}`, time: m.scheduledTime, medStatus: m.status, data: m })),
@@ -294,13 +298,19 @@ export default function Dashboard() {
             <h3 className="text-base font-semibold text-danger-600 mb-3 flex items-center gap-1.5">
               <AlertCircle size={16} />
               逾期提醒
+              {activeReminders.length > 0 && (
+                <span className="inline-flex items-center justify-center bg-danger-500 text-white text-xs rounded-full w-5 h-5 ml-1">
+                  {activeReminders.length}
+                </span>
+              )}
             </h3>
             <div className="space-y-2.5">
-              {overdueCareTasks.map((task) => {
-                const catColor = careCategoryColor[task.category]
+              {activeReminders.map((reminder) => {
+                const task = careTasks.find((t) => t.id === reminder.taskId)
+                if (!task) return null
                 return (
                   <Link
-                    key={task.id}
+                    key={reminder.id}
                     to="/family-care-task"
                     className="bg-danger-50 rounded-xl p-3.5 shadow-sm border border-danger-200 border-l-4 border-l-danger-500 flex items-center gap-3 transition-all hover:shadow-md active:scale-[0.98]"
                   >
@@ -310,7 +320,7 @@ export default function Dashboard() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-warm-800 truncate">{task.title}</p>
                       <p className="text-xs text-danger-500 mt-0.5">
-                        原定 {task.scheduledDate} {task.scheduledTime} · {getContactName(task.assignedContactId)} · 点击处理
+                        {reminder.message}
                       </p>
                     </div>
                     <ChevronRight className="w-4 h-4 text-danger-300 flex-shrink-0" />
@@ -318,29 +328,6 @@ export default function Dashboard() {
                 )
               })}
             </div>
-            {activeReminders.length > 0 && (
-              <div className="mt-3 bg-white rounded-xl p-3.5 shadow-sm border border-warm-200/60">
-                <div className="flex items-center gap-2 mb-2">
-                  <Clock size={14} className="text-amber-500" />
-                  <span className="text-xs font-medium text-warm-600">活跃提醒</span>
-                  <span className="inline-flex items-center justify-center bg-amber-500 text-white text-xs rounded-full w-4 h-4">
-                    {activeReminders.length}
-                  </span>
-                </div>
-                <div className="space-y-1.5">
-                  {activeReminders.slice(0, 3).map((r) => (
-                    <p key={r.id} className="text-xs text-warm-500 truncate">
-                      · {r.message}
-                    </p>
-                  ))}
-                  {activeReminders.length > 3 && (
-                    <Link to="/family-care-task" className="text-xs text-care-500 font-medium">
-                      查看全部 {activeReminders.length} 条提醒 →
-                    </Link>
-                  )}
-                </div>
-              </div>
-            )}
           </section>
         )}
 

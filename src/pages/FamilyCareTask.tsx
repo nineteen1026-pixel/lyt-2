@@ -28,6 +28,7 @@ import {
 } from 'lucide-react'
 import { useCareStore } from '@/store/useCareStore'
 import { contacts } from '@/data/mockData'
+import { deriveReminders, deriveOverdueTasks } from '@/lib/reminderEngine'
 import type {
   CareTaskCategory,
   CareTaskPriority,
@@ -172,15 +173,19 @@ export default function FamilyCareTask() {
     })
   }, [careTasks, filterCategory, filterStatus])
 
+  const derivedReminders = useMemo(() => {
+    return deriveReminders(careTasks, taskReminders)
+  }, [careTasks, taskReminders])
+
   const activeReminders = useMemo(() => {
-    return taskReminders.filter((r) => r.status === 'active')
-  }, [taskReminders])
+    return derivedReminders.filter((r) => r.status === 'active')
+  }, [derivedReminders])
 
   const stats = useMemo(() => {
     const pending = careTasks.filter((t) => t.status === 'pending').length
     const inProgress = careTasks.filter((t) => t.status === 'in_progress').length
     const completed = careTasks.filter((t) => t.status === 'completed').length
-    const overdue = careTasks.filter((t) => t.status === 'overdue').length
+    const overdue = deriveOverdueTasks(careTasks).length
     const todayCheckIns = checkInRecords.filter((r) => r.checkInAt.startsWith(new Date().toISOString().split('T')[0])).length
     const totalCheckIns = checkInRecords.length
     return { pending, inProgress, completed, overdue, todayCheckIns, totalCheckIns }
@@ -645,7 +650,7 @@ export default function FamilyCareTask() {
               </p>
             </div>
 
-            {taskReminders.length === 0 ? (
+            {derivedReminders.length === 0 ? (
               <div className="flex flex-col items-center justify-center rounded-2xl bg-white py-16 shadow-sm border border-warm-200">
                 <Bell size={48} className="text-warm-300 mb-3" />
                 <p className="text-warm-500 text-sm">暂无提醒</p>
@@ -670,7 +675,7 @@ export default function FamilyCareTask() {
                     <div className="space-y-3">
                       {activeReminders.map((reminder, i) => {
                         const task = careTasks.find((t) => t.id === reminder.taskId)
-                        const isOverdue = task?.status === 'overdue'
+                        const isOverdue = task ? (task.status === 'overdue' || (task.scheduledDate < new Date().toISOString().split('T')[0] && task.status !== 'completed')) : false
                         return (
                           <div
                             key={reminder.id}
@@ -749,7 +754,7 @@ export default function FamilyCareTask() {
                     已处理提醒
                   </h3>
                   <div className="space-y-2">
-                    {taskReminders
+                    {derivedReminders
                       .filter((r) => r.status !== 'active')
                       .map((reminder) => {
                         const rCfg = reminderStatusConfig[reminder.status]
